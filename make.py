@@ -31,11 +31,12 @@ BLUE_PLAN = (228, 233, 244)    # 해야 할 공부 (더 흐리게)
 RED_PLAN = (247, 227, 221)     # 해야 할 운동·일정
 TOP_EMPTY = 0.30      # 위쪽 시계 자리
 BOTTOM_EMPTY = 0.075  # 아래쪽 잠금화면 단축 아이콘 자리
+BACKDROP = None       # 바탕 무늬를 그리는 함수(선택)
 SS = 2                # 2배로 그린 뒤 줄여 선을 매끄럽게 한다
 
-SANS = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
-BOLD = "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
-SERIF = "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc"
+# 글꼴: 고운돋움 (저장소 fonts 폴더에 함께 둔다, SIL OFL)
+GOWUN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts", "GowunDodum-Regular.ttf")
+SANS = BOLD = SERIF = GOWUN
 WD = ["월", "화", "수", "목", "금", "토", "일"]
 KST = datetime.timezone(datetime.timedelta(hours=9))
 
@@ -126,6 +127,8 @@ def draw(data, today, W, H, out):
     im = Image.new("RGB", (W * SS, H * SS), PAPER)
     g = ImageDraw.Draw(im)
     u *= SS
+    if BACKDROP:
+        BACKDROP(g, W * SS, H * SS, u)
     W, H = W * SS, H * SS
 
     margin, axis = 46 * u, 50 * u
