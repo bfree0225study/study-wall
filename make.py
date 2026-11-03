@@ -171,7 +171,7 @@ def draw(data, today, W, H, out):
         if d == today:
             r_x, r_y = col * 0.49, 62 * u
             g.ellipse((cx - r_x, y + 50 * u - r_y, cx + r_x, y + 50 * u + r_y),
-                      outline=RED, width=max(2, int(3 * u)))
+                      outline=(196, 52, 44), width=max(2, int(3 * u)))
     top = y + 118 * u
 
     foot_h = 96 * u
