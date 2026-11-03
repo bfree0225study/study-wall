@@ -22,10 +22,13 @@ RULE_STRONG = (176, 168, 150)
 INK = (46, 43, 38)
 INK_SOFT = (116, 110, 98)
 BLUE = (38, 74, 158)
-BLUE_FILL = (58, 92, 172)
 RED = (186, 52, 44)
-RED_FILL = (196, 70, 58)
-SLEEP = (150, 144, 130)
+# 칠하기는 선 없이 연한 색으로 칸 전체를 채운다.
+BLUE_FILL = (198, 211, 238)    # 한 공부
+RED_FILL = (241, 202, 194)     # 한 공부 외
+SLEEP_FILL = (222, 215, 200)   # 수면
+BLUE_PLAN = (228, 233, 244)    # 해야 할 공부 (더 흐리게)
+RED_PLAN = (247, 227, 221)     # 해야 할 운동·일정
 TOP_EMPTY = 0.30      # 위쪽 시계 자리
 BOTTOM_EMPTY = 0.075  # 아래쪽 잠금화면 단축 아이콘 자리
 SS = 2                # 2배로 그린 뒤 줄여 선을 매끄럽게 한다
@@ -72,31 +75,32 @@ def box_text(g, box, s, color, u):
         g.text(((box[0] + box[2]) / 2, (box[1] + box[3]) / 2), s, font=f, fill=color, anchor="mm")
 
 
-def hatch(g, box, color, step, width):
-    """수면 칸의 빗금: 칸 안에 들어오는 45도 선만 그린다."""
-    x0, y0, x1, y1 = box
-    w, h = x1 - x0, y1 - y0
-    for c in range(int(step), int(w + h), int(step)):
-        ax, ay = (x0 + c, y0) if c <= w else (x1, y0 + c - w)
-        bx, by = (x0, y0 + c) if c <= h else (x0 + c - h, y1)
-        g.line((ax, ay, bx, by), fill=color, width=width)
-
-
 def header(g, data, today, W, L, R, y, u):
-    """머리말: 내 노트 표기 그대로 -N주 + 일 단위 분수."""
+    """머리말: 남은 기간을 주 단위 대분수로 (-5 5/7 = 5주 5일)."""
     exam = data.get("exam")
     if not exam:
         return y + 136 * u
     left = (datetime.date.fromisoformat(exam["date"]) - today).days
     weeks, rest = divmod(max(left, 0), 7)
-    fs, fb, ff = font(SANS, int(36 * u)), font(SERIF, int(104 * u)), font(SERIF, int(34 * u))
-    g.text((L, y + 42 * u), f"{exam['name']}까지", font=fs, fill=INK_SOFT)
-    x = L + text_w(g, f"{exam['name']}까지", fs) + 22 * u
-    g.text((x, y - 16 * u), f"-{weeks}", font=fb, fill=INK)
-    x += text_w(g, f"-{weeks}", fb) + 14 * u
-    g.text((x + 3 * u, y + 8 * u), str(rest), font=ff, fill=INK)
-    g.line((x, y + 58 * u, x + 26 * u, y + 58 * u), fill=INK, width=max(2, int(3 * u)))
-    g.text((x + 3 * u, y + 62 * u), "7", font=ff, fill=INK)
+    fs, fb, ff = font(SANS, int(36 * u)), font(SERIF, int(104 * u)), font(SERIF, int(44 * u))
+    base = y + 98 * u
+    name = f"{exam['name']}까지"
+    g.text((L, base), name, font=fs, fill=INK_SOFT, anchor="ls")
+    x = L + text_w(g, name, fs) + 22 * u
+    whole = f"-{weeks}" if weeks or not rest else "-"
+    g.text((x, base), whole, font=fb, fill=INK, anchor="ls")
+    top, bot = g.textbbox((x, base), whole, font=fb, anchor="ls")[1::2]
+    mid = (top + bot) / 2
+    if rest:
+        # 분수는 정수 부분 글자의 가운데 높이에 맞춰 세운다.
+        x += text_w(g, whole, fb) + 12 * u
+        digit_h = g.textbbox((0, 0), "7", font=ff, anchor="ls")
+        digit_h = digit_h[3] - digit_h[1]
+        fw = max(text_w(g, str(rest), ff), text_w(g, "7", ff)) + 10 * u
+        cx = x + fw / 2
+        g.text((cx, mid - 9 * u), str(rest), font=ff, fill=INK, anchor="ms")
+        g.line((x, mid, x + fw, mid), fill=INK, width=max(2, int(3 * u)))
+        g.text((cx, mid + 9 * u + digit_h), "7", font=ff, fill=INK, anchor="ms")
     return y + 136 * u
 
 
@@ -159,30 +163,32 @@ def draw(data, today, W, H, out):
         strong = h % 6 == 0
         g.line((grid_l, Y(h), R, Y(h)), fill=RULE_STRONG if strong else RULE,
                width=max(1, int((2 if strong else 1) * u)))
-        if strong and h < 24:
-            g.text((L, Y(h) - 2 * u), str(h), font=f_axis, fill=INK_SOFT)
+        if h % 3 == 0:
+            # 시각 글자는 해당 줄 높이의 가운데에 맞춘다.
+            g.text((grid_l - 10 * u, Y(h)), str(h), font=f_axis, fill=INK_SOFT, anchor="rm")
     for i in range(8):
         g.line((X(i), top, X(i), bottom), fill=RULE_STRONG, width=max(1, int(2 * u)))
 
     # 기록과 일정
     pad = 4 * u
+    gap = 1.5 * u  # 이어진 칸 사이를 살짝 띄워 구분한다
     week_study, sleep_hours, sleep_days = 0, 0, 0
     totals = []
     for i, d in enumerate(dates):
         rec = data["days"].get(d.isoformat(), {})
         spent = 0
         for s, e in rec.get("sleep", []):
-            box = (X(i) + pad, Y(hours(s)), X(i + 1) - pad, Y(hours(e)))
-            hatch(g, box, SLEEP, 15 * u, max(1, int(2 * u)))
+            box = (X(i) + pad, Y(hours(s)) + gap, X(i + 1) - pad, Y(hours(e)) - gap)
+            g.rectangle(box, fill=SLEEP_FILL)
             sleep_hours += hours(e) - hours(s)
         if rec.get("sleep"):
             sleep_days += 1
         for s, e, kind, name in rec.get("blocks", []):
             a, b = hours(s), hours(e)
             fill, ink = (BLUE_FILL, BLUE) if kind == "study" else (RED_FILL, RED)
-            box = (X(i) + pad, Y(a), X(i + 1) - pad, Y(b))
-            g.rectangle(box, fill=fill, outline=ink, width=max(1, int(2 * u)))
-            box_text(g, box, name, PAPER, u)
+            box = (X(i) + pad, Y(a) + gap, X(i + 1) - pad, Y(b) - gap)
+            g.rectangle(box, fill=fill)
+            box_text(g, box, name, ink, u)
             if kind == "study":
                 spent += b - a
         totals.append(spent if d <= today else None)
@@ -198,8 +204,8 @@ def draw(data, today, W, H, out):
                 # 이미 칠한 시간과 겹치면 기록을 우선한다.
                 if any(a < hours(e) and hours(s) < b for s, e, _, _ in done):
                     continue
-                box = (X(i) + pad, Y(a), X(i + 1) - pad, Y(b))
-                g.rectangle(box, outline=RULE_STRONG, width=max(1, int(2 * u)))
+                box = (X(i) + pad, Y(a) + gap, X(i + 1) - pad, Y(b) - gap)
+                g.rectangle(box, fill=BLUE_PLAN if p.get("k") == "study" else RED_PLAN)
                 box_text(g, box, p["t"], INK_SOFT, u)
 
     # 각 날짜 아래 하루 공부 합계

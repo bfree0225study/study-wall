@@ -11,6 +11,8 @@ import sys
 
 KST = datetime.timezone(datetime.timedelta(hours=9))
 SHORT = {"영어": "영", "수학": "수", "기하": "기", "화학": "화", "국어": "국"}
+SPLIT = ["등", "가슴", "하체"]  # 3분할 순서. 마지막으로 한 부위의 다음부터 채운다.
+STUDY = ("학원", "자습", "인강")
 
 
 def load(path):
@@ -42,10 +44,19 @@ def main(folder):
     monday = today - datetime.timedelta(days=today.weekday())
     week = {(monday + datetime.timedelta(days=i)).isoformat() for i in range(7)}
 
-    days = {}
+    every = {}
     for path in glob.glob(os.path.join(folder, "days", "*.json")):
         d = load(path)
-        if d.get("date") not in week:
+        if d.get("date"):
+            every[d["date"]] = d
+
+    def workouts(d):
+        spans = [t for _, _, t, _ in d.get("spans") or [] if t in SPLIT]
+        return spans or [l.get("note") for l in d.get("logs", []) if l.get("note") in SPLIT]
+
+    days = {}
+    for d in every.values():
+        if d["date"] not in week:
             continue
         if isinstance(d.get("spans"), list):
             days[d["date"]] = {
@@ -59,12 +70,31 @@ def main(folder):
     upcoming = [e for e in exams if e["date"] >= today.isoformat()]
     wall = load(os.path.join(folder, "plan", "wall.json")) if os.path.exists(os.path.join(folder, "plan", "wall.json")) else {}
 
-    weekly = [{"dow": t["day"], "s": t["start"], "e": t["end"], "t": SHORT.get(t["title"], t["title"])}
-              for t in items(folder, "timetable") if t.get("kind") != "학교"]
+    table = items(folder, "timetable")
+    weekly = [{"dow": t["day"], "s": t["start"], "e": t["end"], "t": SHORT.get(t["title"], t["title"]),
+               "k": "study" if t.get("kind") in STUDY else "other"}
+              for t in table if t.get("kind") not in ("학교", "운동")]
     plan, notes = [], {}
+
+    # 운동 시간에는 3분할 순서대로 다음에 할 부위를 적는다.
+    last = None
+    for date in sorted(every):
+        if date <= today.isoformat() and workouts(every[date]):
+            last = workouts(every[date])[-1]
+    nxt = (SPLIT.index(last) + 1) % 3 if last else None
+    wd = ["월", "화", "수", "목", "금", "토", "일"]
+    for i in range(7):
+        d = monday + datetime.timedelta(days=i)
+        if d < today or (d == today and workouts(every.get(d.isoformat(), {}))):
+            continue
+        for t in sorted((t for t in table if t.get("kind") == "운동" and t["day"] == wd[i]), key=lambda t: t["start"]):
+            plan.append({"d": d.isoformat(), "s": t["start"], "e": t["end"], "k": "other",
+                         "t": SPLIT[nxt] if nxt is not None else "운동"})
+            if nxt is not None:
+                nxt = (nxt + 1) % 3
     for t in items(folder, "tasks"):
         if t.get("start") and t.get("end"):
-            plan.append({"d": t["date"], "s": t["start"], "e": t["end"], "t": t.get("short") or t["title"]})
+            plan.append({"d": t["date"], "s": t["start"], "e": t["end"], "k": "other", "t": t.get("short") or t["title"]})
         else:
             notes.setdefault(t["date"], []).append(t.get("short") or t["title"])
     for e in exams:
