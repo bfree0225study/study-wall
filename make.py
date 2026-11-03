@@ -206,6 +206,11 @@ def draw(data, today, W, H, out):
             box_text(g, box, name, ink, u)
             if kind == "study":
                 spent += b - a
+        # 이어 붙은 칸 사이에 구분선을 긋는다.
+        ends = {e for _, e in rec.get("sleep", [])} | {e for _, e, _, _ in rec.get("blocks", [])}
+        for s, _, _, _ in rec.get("blocks", []):
+            if s in ends:
+                g.line((X(i) + pad, Y(hours(s)), X(i + 1) - pad, Y(hours(s))), fill=INK_SOFT, width=max(2, int(2 * u)))
         totals.append(spent if d <= today else None)
         week_study += spent if d <= today else 0
 
