@@ -10,7 +10,7 @@ def font(p,s):
         except Exception: pass
     return ImageFont.truetype(p,s)
 d=json.load(open("data.json",encoding="utf-8"))
-today=datetime.date.fromisoformat(d["updated"])
+today=(datetime.datetime.utcnow()+datetime.timedelta(hours=9)).date()
 def dd(s): return (datetime.date.fromisoformat(s)-today).days
 def make(W,H,out):
     im=Image.new("RGB",(W,H),(18,18,20)); g=ImageDraw.Draw(im)
@@ -23,14 +23,8 @@ def make(W,H,out):
         n=dd(it["d"]); g.text((X,y),f"D-{n}",font=font(B,int(40*u)),fill=(255,255,255))
         g.text((X+int(170*u),y),it["t"],font=font(F,int(40*u)),fill=(210,210,210)); y+=int(72*u)
     y+=int(20*u); g.line((X,y,R,y),fill=(70,70,70),width=2); y+=int(40*u)
-    for p in d["progress"]:
-        g.text((X,y),p["n"],font=font(F,int(36*u)),fill=(210,210,210))
-        bx=X+int(150*u); bw=R-bx-int(110*u)
-        g.rectangle((bx,y+int(16*u),bx+bw,y+int(34*u)),fill=(55,55,58))
-        g.rectangle((bx,y+int(16*u),bx+int(bw*p["p"]/100),y+int(34*u)),fill=(240,240,240))
-        g.text((R-int(90*u),y),f"{p['p']}%",font=font(F,int(36*u)),fill=(210,210,210)); y+=int(68*u)
     y+=int(20*u); g.line((X,y,R,y),fill=(70,70,70),width=2); y+=int(40*u)
     g.text((X,y),f"수면 {d['sleep']}   컨디션 {d['condition']}",font=font(F,int(36*u)),fill=(170,170,170))
-    g.text((X,H-int(90*u)),f"업데이트 {d['updated']}"+("  (예시 데이터)" if d.get("example") else ""),font=font(F,int(28*u)),fill=(110,110,110))
+    g.text((X,H-int(90*u)),f"업데이트 {today.isoformat()}"+("  (예시 데이터)" if d.get("example") else ""),font=font(F,int(28*u)),fill=(110,110,110))
     im.save(out)
 make(1080,2340,"phone.png"); make(1200,1920,"tablet.png")
