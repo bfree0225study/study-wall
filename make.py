@@ -85,26 +85,12 @@ def header(g, data, today, W, L, R, y, u):
     if not exam:
         return y + 136 * u
     left = (datetime.date.fromisoformat(exam["date"]) - today).days
-    weeks, rest = divmod(max(left, 0), 7)
-    fs, fb, ff = font(SANS, int(36 * u)), font(SERIF, int(104 * u)), font(SERIF, int(44 * u))
+    fs, fb = font(SANS, int(36 * u)), font(SERIF, int(104 * u))
     base = y + 98 * u
     name = f"{exam['name']}까지"
     g.text((L, base), name, font=fs, fill=INK_SOFT, anchor="ls")
     x = L + text_w(g, name, fs) + 22 * u
-    whole = f"-{weeks}" if weeks or not rest else "-"
-    g.text((x, base), whole, font=fb, fill=INK, anchor="ls")
-    top, bot = g.textbbox((x, base), whole, font=fb, anchor="ls")[1::2]
-    mid = (top + bot) / 2
-    if rest:
-        # 분수는 정수 부분 글자의 가운데 높이에 맞춰 세운다.
-        x += text_w(g, whole, fb) + 12 * u
-        digit_h = g.textbbox((0, 0), "7", font=ff, anchor="ls")
-        digit_h = digit_h[3] - digit_h[1]
-        fw = max(text_w(g, str(rest), ff), text_w(g, "7", ff)) + 10 * u
-        cx = x + fw / 2
-        g.text((cx, mid - 9 * u), str(rest), font=ff, fill=INK, anchor="ms")
-        g.line((x, mid, x + fw, mid), fill=INK, width=max(2, int(3 * u)))
-        g.text((cx, mid + 9 * u + digit_h), "7", font=ff, fill=INK, anchor="ms")
+    g.text((x, base), f"{max(left, 0)}일", font=fb, fill=INK, anchor="ls")
     return y + 136 * u
 
 
