@@ -68,10 +68,13 @@ def box_text(g, box, s, color, u):
     """칸 높이에 맞춰 글자 크기를 줄이고, 너무 작아지면 생략한다."""
     h = box[3] - box[1]
     size = min(26 * u, h * 0.8)
-    if size < 15 * u:
+    # 칸 너비에 맞을 때까지 글자를 줄인다 (이름은 줄여 쓰지 않는다).
+    while size >= 12 * u and text_w(g, s, font(BOLD, int(size))) >= box[2] - box[0] - 4 * u:
+        size -= u
+    if size < 12 * u:
         return
     f = font(BOLD, int(size))
-    if text_w(g, s, f) < box[2] - box[0] - 4 * u:
+    if True:
         g.text(((box[0] + box[2]) / 2, (box[1] + box[3]) / 2), s, font=f, fill=color, anchor="mm")
 
 
@@ -136,9 +139,12 @@ def draw(data, today, W, H, out):
     f_head, f_date = font(BOLD, int(32 * u)), font(SANS, int(23 * u))
     for i, d in enumerate(dates):
         cx = grid_l + col * (i + 0.5)
-        name = WD[i]
+        name, md_ = WD[i], f" {d.month}/{d.day}"
         color = RED if i >= 5 else INK
-        g.text((cx - text_w(g, name, f_head) / 2, y - 6 * u), name, font=f_head, fill=color)
+        f_md = font(SANS, int(24 * u))
+        tw = text_w(g, name, f_head) + text_w(g, md_, f_md)
+        g.text((cx - tw / 2, y - 6 * u), name, font=f_head, fill=color)
+        g.text((cx - tw / 2 + text_w(g, name, f_head), y + 2 * u), md_, font=f_md, fill=INK_SOFT)
         # 날짜 대신 그날 기준 시험까지 남은 기간을 대분수(-5 5/7)로 적는다.
         exam = data.get("exam")
         left = (datetime.date.fromisoformat(exam["date"]) - d).days if exam else -1
@@ -160,7 +166,7 @@ def draw(data, today, W, H, out):
             md = f"{d.month}/{d.day}"
             g.text((cx - text_w(g, md, f_date) / 2, y + 56 * u), md, font=f_date, fill=INK_SOFT)
         if d == today:
-            r_x, r_y = col * 0.40, 62 * u
+            r_x, r_y = col * 0.49, 62 * u
             g.ellipse((cx - r_x, y + 50 * u - r_y, cx + r_x, y + 50 * u + r_y),
                       outline=RED, width=max(2, int(3 * u)))
     top = y + 118 * u
