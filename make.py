@@ -129,18 +129,22 @@ def draw(data, today, W, H, out):
 
     monday = today - datetime.timedelta(days=today.weekday())
     dates = [monday + datetime.timedelta(days=i) for i in range(7)]
-    f_head, f_date = font(BOLD, int(32 * u)), font(SANS, int(24 * u))
+    f_head, f_date = font(BOLD, int(32 * u)), font(SANS, int(23 * u))
     for i, d in enumerate(dates):
         cx = grid_l + col * (i + 0.5)
-        name, md = WD[i], f"{d.month}/{d.day}"
+        name = WD[i]
         color = RED if i >= 5 else INK
-        g.text((cx - text_w(g, name, f_head) / 2, y), name, font=f_head, fill=color)
-        g.text((cx - text_w(g, md, f_date) / 2, y + 42 * u), md, font=f_date, fill=INK_SOFT)
+        g.text((cx - text_w(g, name, f_head) / 2, y - 6 * u), name, font=f_head, fill=color)
+        # 날짜는 노트의 분수처럼 월을 위, 일을 아래에 적는다.
+        mo, da = str(d.month), str(d.day)
+        g.text((cx - text_w(g, mo, f_date) / 2, y + 34 * u), mo, font=f_date, fill=INK_SOFT)
+        g.line((cx - 20 * u, y + 69 * u, cx + 20 * u, y + 69 * u), fill=INK_SOFT, width=max(2, int(2 * u)))
+        g.text((cx - text_w(g, da, f_date) / 2, y + 70 * u), da, font=f_date, fill=INK_SOFT)
         if d == today:
-            r_x, r_y = col * 0.40, 44 * u
-            g.ellipse((cx - r_x, y + 38 * u - r_y, cx + r_x, y + 38 * u + r_y),
+            r_x, r_y = col * 0.40, 62 * u
+            g.ellipse((cx - r_x, y + 50 * u - r_y, cx + r_x, y + 50 * u + r_y),
                       outline=RED, width=max(2, int(3 * u)))
-    top = y + 86 * u
+    top = y + 118 * u
 
     foot_h = 96 * u
     total_h = 50 * u
