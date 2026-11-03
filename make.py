@@ -94,18 +94,18 @@ def header(g, data, today, W, L, R, y, u):
     return y + 136 * u
 
 
-def footer(g, week_study, sleep_avg, stamp, L, R, y, u):
-    fs, fb, ft = font(SANS, int(32 * u)), font(BOLD, int(46 * u)), font(SANS, int(24 * u))
+def footer(g, stats, stamp, L, R, y, u):
+    """stats: [(이름, 값)]"""
+    fs, fb, ft = font(SANS, int(28 * u)), font(BOLD, int(40 * u)), font(SANS, int(24 * u))
     g.line((L, y, R, y), fill=RULE_STRONG, width=max(2, int(2 * u)))
     y += 16 * u
-    g.text((L, y + 10 * u), "주간", font=fs, fill=INK_SOFT)
-    x = L + text_w(g, "주간", fs) + 14 * u
-    g.text((x, y - 2 * u), f"{label(week_study)}시간", font=fb, fill=BLUE)
-    x += text_w(g, f"{label(week_study)}시간", fb) + 44 * u
-    g.text((x, y + 10 * u), "평균 수면", font=fs, fill=INK_SOFT)
-    x += text_w(g, "평균 수면", fs) + 14 * u
-    g.text((x, y - 2 * u), f"{label(sleep_avg)}시간" if sleep_avg else "–", font=fb, fill=INK)
-    g.text((R - text_w(g, stamp, ft), y + 18 * u), stamp, font=ft, fill=INK_SOFT)
+    x = L
+    for name, value in stats:
+        g.text((x, y + 34 * u), name, font=fs, fill=INK_SOFT, anchor="ls")
+        x += text_w(g, name, fs) + 10 * u
+        g.text((x, y + 34 * u), value, font=fb, fill=INK, anchor="ls")
+        x += text_w(g, value, fb) + 30 * u
+    g.text((R, y + 34 * u), stamp, font=ft, fill=INK_SOFT, anchor="rs")
 
 
 def draw(data, today, W, H, out):
@@ -244,8 +244,12 @@ def draw(data, today, W, H, out):
             g.text((X(i) + (col - text_w(g, s, f_total)) / 2, bottom + 4 * u), s, font=f_total, fill=BLUE)
 
     stamp = f"{today.month}/{today.day} 갱신" + (" · 예시" if data.get("example") else "")
-    footer(g, week_study, sleep_hours / sleep_days if sleep_days else None, stamp,
-           L, R, bottom + total_h, u)
+    # 아침에 만들 때 오늘은 아직 0시간이므로, 기록이 없는 오늘은 나누는 날수에서 뺀다.
+    passed = today.weekday() + (1 if totals[today.weekday()] else 0)
+    stats = [("주간", f"{label(week_study)}시간"),
+             ("하루 평균", f"{label(week_study / passed)}시간" if passed else "–"),
+             ("수면", f"{label(sleep_hours / sleep_days)}시간" if sleep_days else "–")]
+    footer(g, stats, stamp, L, R, bottom + total_h, u)
     im.resize((W // SS, H // SS), Image.LANCZOS).save(out, optimize=True)
 
 
