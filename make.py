@@ -143,7 +143,7 @@ def draw(data, today, W, H, out):
     for i, d in enumerate(dates):
         cx = grid_l + col * (i + 0.5)
         name, md_ = WD[i], f" {d.month}/{d.day}"
-        color = RED if i >= 5 else INK
+        color = (40, 80, 170) if i == 5 else (196, 52, 44) if i == 6 else INK  # 달력처럼 토 파랑, 일 빨강
         f_md = font(SANS, int(24 * u))
         tw = text_w(g, name, f_head) + text_w(g, md_, f_md)
         g.text((cx - tw / 2, y - 6 * u), name, font=f_head, fill=color)
@@ -219,7 +219,7 @@ def draw(data, today, W, H, out):
         ends = {e for _, e in rec.get("sleep", [])} | {e for _, e, _, _ in rec.get("blocks", [])}
         for s, _, _, _ in rec.get("blocks", []):
             if s in ends:
-                g.line((X(i) + pad, Y(hours(s)), X(i + 1) - pad, Y(hours(s))), fill=INK_SOFT, width=max(2, int(2 * u)))
+                g.line((X(i) + pad, Y(hours(s)), X(i + 1) - pad, Y(hours(s))), fill=(150, 150, 150), width=max(1, int(1 * u)))
         totals.append(spent if d <= today else None)
         week_study += spent if d <= today else 0
 
