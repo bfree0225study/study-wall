@@ -6,6 +6,8 @@ data.json 구조
           종류: study(파랑) / other(빨강). 자정을 넘는 수면은 날짜별로 나눠 적는다.
   weekly  [{"dow": "월", "s", "e", "t"}]         매주 반복 일정 (지나지 않은 날에 흐리게)
   plan    [{"d": "YYYY-MM-DD", "s", "e", "t"}]   특정 날짜 일정 (지나지 않은 날에 흐리게)
+  notes   {"YYYY-MM-DD": ["글자"]}               시각 없는 일정 (날짜 아래 빨간 글자)
+  exam가 null이면 머리말을 비운다(시험이 끝난 기간).
 """
 import datetime
 import json
@@ -82,7 +84,9 @@ def hatch(g, box, color, step, width):
 
 def header(g, data, today, W, L, R, y, u):
     """머리말: 내 노트 표기 그대로 -N주 + 일 단위 분수."""
-    exam = data["exam"]
+    exam = data.get("exam")
+    if not exam:
+        return y + 136 * u
     left = (datetime.date.fromisoformat(exam["date"]) - today).days
     weeks, rest = divmod(max(left, 0), 7)
     fs, fb, ff = font(SANS, int(36 * u)), font(SERIF, int(104 * u)), font(SERIF, int(34 * u))
@@ -184,8 +188,12 @@ def draw(data, today, W, H, out):
         if d >= today:
             items = [p for p in data.get("weekly", []) if p["dow"] == WD[i]]
             items += [p for p in data.get("plan", []) if p["d"] == d.isoformat()]
+            done = rec.get("blocks", [])
             for p in items:
                 a, b = hours(p["s"]), hours(p["e"])
+                # 이미 칠한 시간과 겹치면 기록을 우선한다.
+                if any(a < hours(e) and hours(s) < b for s, e, _, _ in done):
+                    continue
                 box = (X(i) + pad, Y(a), X(i + 1) - pad, Y(b))
                 g.rectangle(box, outline=RULE_STRONG, width=max(1, int(2 * u)))
                 box_text(g, box, p["t"], INK_SOFT, u)
@@ -193,10 +201,18 @@ def draw(data, today, W, H, out):
     # 각 날짜 아래 하루 공부 합계
     f_total = font(BOLD, int(32 * u))
     for i, t in enumerate(totals):
-        if t is None:
-            continue
-        s = label(t)
-        g.text((X(i) + (col - text_w(g, s, f_total)) / 2, bottom + 4 * u), s, font=f_total, fill=BLUE)
+        d = dates[i]
+        note = data.get("notes", {}).get(d.isoformat(), []) if d >= today else []
+        if note:
+            s = note[0] + (f"+{len(note) - 1}" if len(note) > 1 else "")
+            size = 28
+            while text_w(g, s, font(BOLD, int(size * u))) > col - 8 * u and size > 16:
+                size -= 2
+            f_note = font(BOLD, int(size * u))
+            g.text((X(i) + (col - text_w(g, s, f_note)) / 2, bottom + 8 * u), s, font=f_note, fill=RED)
+        elif t is not None:
+            s = label(t)
+            g.text((X(i) + (col - text_w(g, s, f_total)) / 2, bottom + 4 * u), s, font=f_total, fill=BLUE)
 
     stamp = f"{today.month}/{today.day} 갱신" + (" · 예시" if data.get("example") else "")
     footer(g, week_study, sleep_hours / sleep_days if sleep_days else None, stamp,
