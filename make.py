@@ -146,6 +146,9 @@ def draw(data, today, W, H, out):
         color = (40, 80, 170) if i == 5 else (196, 52, 44) if i == 6 else INK  # 달력처럼 토 파랑, 일 빨강
         f_md = font(SANS, int(24 * u))
         tw = text_w(g, name, f_head) + text_w(g, md_, f_md)
+        if i >= 5:  # 주말 머리칸에 연한 색
+            g.rectangle((grid_l + col * i + 2 * u, y - 14 * u, grid_l + col * (i + 1) - 2 * u, y + 104 * u),
+                        fill=BLUE_FILL if i == 5 else RED_FILL)
         g.text((cx - tw / 2, y - 6 * u), name, font=f_head, fill=color)
         g.text((cx - tw / 2 + text_w(g, name, f_head), y + 2 * u), md_, font=f_md, fill=INK_SOFT)
         # 날짜 대신 그날 기준 시험까지 남은 기간을 대분수(-5 5/7)로 적는다.
