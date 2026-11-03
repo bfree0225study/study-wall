@@ -188,7 +188,7 @@ def draw(data, today, W, H, out):
     # 눈금: 1시간 얇게, 6시간 진하게
     f_axis = font(SANS, int(22 * u))
     for h in range(25):
-        strong = h % 24 == 0  # 위아래 테두리만 진하게
+        strong = h % 12 == 0  # 위아래 테두리와 낮 12시만 진하게
         g.line((grid_l, Y(h), R, Y(h)), fill=RULE_STRONG if strong else RULE,
                width=max(1, int((2 if strong else 1) * u)))
         if h % 3 == 0:
