@@ -139,11 +139,26 @@ def draw(data, today, W, H, out):
         name = WD[i]
         color = RED if i >= 5 else INK
         g.text((cx - text_w(g, name, f_head) / 2, y - 6 * u), name, font=f_head, fill=color)
-        # 날짜는 노트의 분수처럼 월을 위, 일을 아래에 적는다.
-        mo, da = str(d.month), str(d.day)
-        g.text((cx - text_w(g, mo, f_date) / 2, y + 34 * u), mo, font=f_date, fill=INK_SOFT)
-        g.line((cx - 20 * u, y + 69 * u, cx + 20 * u, y + 69 * u), fill=INK_SOFT, width=max(2, int(2 * u)))
-        g.text((cx - text_w(g, da, f_date) / 2, y + 70 * u), da, font=f_date, fill=INK_SOFT)
+        # 날짜 대신 그날 기준 시험까지 남은 기간을 대분수(-5 5/7)로 적는다.
+        exam = data.get("exam")
+        left = (datetime.date.fromisoformat(exam["date"]) - d).days if exam else -1
+        if left >= 0:
+            w, r = divmod(left, 7)
+            whole = f"-{w}" if w or not r else "-"
+            fw_ = font(SERIF, int(40 * u))
+            ww = text_w(g, whole, fw_)
+            frac_w = max(text_w(g, str(r), f_date), text_w(g, "7", f_date)) + 6 * u if r else 0
+            x0 = cx - (ww + (6 * u + frac_w if r else 0)) / 2
+            mid = y + 70 * u
+            g.text((x0, mid), whole, font=fw_, fill=INK_SOFT, anchor="lm")
+            if r:
+                fx = x0 + ww + 6 * u
+                g.text((fx + frac_w / 2, mid - 4 * u), str(r), font=f_date, fill=INK_SOFT, anchor="md")
+                g.line((fx, mid, fx + frac_w, mid), fill=INK_SOFT, width=max(2, int(2 * u)))
+                g.text((fx + frac_w / 2, mid + 2 * u), "7", font=f_date, fill=INK_SOFT, anchor="ma")
+        else:
+            md = f"{d.month}/{d.day}"
+            g.text((cx - text_w(g, md, f_date) / 2, y + 56 * u), md, font=f_date, fill=INK_SOFT)
         if d == today:
             r_x, r_y = col * 0.40, 62 * u
             g.ellipse((cx - r_x, y + 50 * u - r_y, cx + r_x, y + 50 * u + r_y),
