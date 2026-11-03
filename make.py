@@ -188,12 +188,12 @@ def draw(data, today, W, H, out):
     # 눈금: 1시간 얇게, 6시간 진하게
     f_axis = font(SANS, int(22 * u))
     for h in range(25):
-        strong = h % 6 == 0
+        strong = h % 24 == 0  # 위아래 테두리만 진하게
         g.line((grid_l, Y(h), R, Y(h)), fill=RULE_STRONG if strong else RULE,
                width=max(1, int((2 if strong else 1) * u)))
         if h % 3 == 0:
             # 시각 글자는 해당 줄 높이의 가운데에 맞춘다.
-            g.text((grid_l - 10 * u, Y(h)), str(h), font=f_axis, fill=INK_SOFT, anchor="rm")
+            g.text((grid_l - 10 * u, Y(h)), str(h % 12 or 12), font=f_axis, fill=INK_SOFT, anchor="rm")
     for i in range(8):
         g.line((X(i), top, X(i), bottom), fill=RULE_STRONG, width=max(1, int(2 * u)))
 
