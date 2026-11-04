@@ -29,8 +29,8 @@ RED_FILL = (249, 214, 208)     # 한 공부 외
 SLEEP_FILL = (205, 205, 205)   # 수면
 BLUE_PLAN = (240, 245, 252)    # 해야 할 공부
 RED_PLAN = (253, 241, 239)     # 해야 할 운동·일정
-TOP_EMPTY = 0.30      # 위쪽 시계 자리
-BOTTOM_EMPTY = 0.075  # 아래쪽 잠금화면 단축 아이콘 자리
+TOP_EMPTY = 0.27      # 위쪽 시계 자리
+BOTTOM_EMPTY = 0.115  # 아래쪽 잠금화면 단축 아이콘 자리
 BACKDROP = None       # 바탕 무늬를 그리는 함수(선택)
 SS = 2                # 2배로 그린 뒤 줄여 선을 매끄럽게 한다
 
@@ -94,9 +94,9 @@ def header(g, data, today, W, L, R, y, u):
     return y + 136 * u
 
 
-def footer(g, stats, stamp, L, R, y, u):
+def footer(g, stats, L, R, y, u):
     """stats: [(이름, 값)]"""
-    fs, fb, ft = font(SANS, int(28 * u)), font(BOLD, int(40 * u)), font(SANS, int(24 * u))
+    fs, fb = font(SANS, int(28 * u)), font(BOLD, int(40 * u))
     g.line((L, y, R, y), fill=RULE_STRONG, width=max(2, int(2 * u)))
     y += 16 * u
     x = L
@@ -105,7 +105,6 @@ def footer(g, stats, stamp, L, R, y, u):
         x += text_w(g, name, fs) + 10 * u
         g.text((x, y + 34 * u), value, font=fb, fill=INK, anchor="ls")
         x += text_w(g, value, fb) + 30 * u
-    g.text((R, y + 34 * u), stamp, font=ft, fill=INK_SOFT, anchor="rs")
 
 
 def draw(data, today, W, H, out):
@@ -246,10 +245,12 @@ def draw(data, today, W, H, out):
     stamp = f"{today.month}/{today.day} 갱신" + (" · 예시" if data.get("example") else "")
     # 아침에 만들 때 오늘은 아직 0시간이므로, 기록이 없는 오늘은 나누는 날수에서 뺀다.
     passed = today.weekday() + (1 if totals[today.weekday()] else 0)
-    stats = [("주간", f"{label(week_study)}시간"),
-             ("하루 평균", f"{label(week_study / passed)}시간" if passed else "–"),
-             ("수면", f"{label(sleep_hours / sleep_days)}시간" if sleep_days else "–")]
-    footer(g, stats, stamp, L, R, bottom + total_h, u)
+    stats = [("주간 공부", f"{label(week_study)}시간"),
+             ("하루 평균 공부", f"{label(week_study / passed)}시간" if passed else "–"),
+             ("평균 수면", f"{label(sleep_hours / sleep_days)}시간" if sleep_days else "–")]
+    footer(g, stats, L, R, bottom + total_h, u)
+    # 갱신 날짜는 머리말 줄 오른쪽에 둔다.
+    g.text((R, H * TOP_EMPTY + 98 * u), stamp, font=font(SANS, int(24 * u)), fill=INK_SOFT, anchor="rs")
     im.resize((W // SS, H // SS), Image.LANCZOS).save(out, optimize=True)
 
 
