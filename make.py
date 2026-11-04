@@ -284,8 +284,10 @@ def draw(data, today, W, H, out):
 
 if __name__ == "__main__":
     base = os.path.dirname(os.path.abspath(__file__))
-    with open(os.path.join(base, "data.json"), encoding="utf-8") as f:
+    # 환경변수 WALL_SUFFIX가 있으면 data_new.json -> phone_new.png처럼 이름을 구분한다(새 시스템 시험용).
+    sfx = os.environ.get("WALL_SUFFIX", "")
+    with open(os.path.join(base, f"data{sfx}.json"), encoding="utf-8") as f:
         data = json.load(f)
     today = datetime.datetime.now(KST).date()
-    draw(data, today, 1080, 2340, os.path.join(base, "phone.png"))
-    draw(data, today, 1200, 1920, os.path.join(base, "tablet.png"))
+    draw(data, today, 1080, 2340, os.path.join(base, f"phone{sfx}.png"))
+    draw(data, today, 1200, 1920, os.path.join(base, f"tablet{sfx}.png"))

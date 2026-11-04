@@ -1,0 +1,66 @@
+# 잠금화면 이미지를 만든다. Claude 없이 GitHub에서 돌아간다.
+# 실행되는 때: 기록장에서 저장했을 때(Apps Script가 요청), 매일 자정 직후와 새벽, 손으로 실행.
+name: wall
+
+on:
+  workflow_dispatch:
+  schedule:
+    # GitHub 시각은 UTC. 한국 00:10, 05:00, 05:40 (새벽에는 지연에 대비해 두 번)
+    - cron: "10 15 * * *"
+    - cron: "0 20 * * *"
+    - cron: "40 20 * * *"
+
+permissions:
+  contents: write
+
+# 동시에 두 번 돌아 서로 덮어쓰지 않게 한다.
+concurrency:
+  group: wall
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # 시험 기간: _new 를 붙여 phone_new.png / tablet_new.png 로 따로 만든다.
+      # 기존 시스템으로 전환할 때 이 값을 빈 문자열("")로 바꾼다.
+      WALL_SUFFIX: "_new"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 글꼴·그림 도구 설치
+        run: pip install pillow
+
+      - name: 기록장에서 내려받기
+        env:
+          APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}
+          APPS_SCRIPT_TOKEN: ${{ secrets.APPS_SCRIPT_TOKEN }}
+        run: |
+          curl -sSfL --retry 3 --max-time 120 -G "$APPS_SCRIPT_URL" \
+            --data-urlencode "export=1" --data-urlencode "k=$APPS_SCRIPT_TOKEN" -o export.json
+
+      - name: 풀고 이미지 만들기
+        run: |
+          python3 tools/unpack.py export.json export
+          python3 sync.py export
+          python3 make.py
+
+      - name: 올리기
+        run: |
+          # 예약 실행일 때만 확인용 파일을 갱신해, 저장소가 60일 쉬어서 예약이 꺼지는 일을 막는다.
+          if [ "${{ github.event_name }}" = "schedule" ]; then date -u +%FT%TZ > .heartbeat; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "data${WALL_SUFFIX}.json" "phone${WALL_SUFFIX}.png" "tablet${WALL_SUFFIX}.png"
+          if [ -f .heartbeat ]; then git add .heartbeat; fi
+          if git diff --cached --quiet; then echo "바뀐 것이 없습니다."; exit 0; fi
+          git commit -m "Update lock screen"
+          for i in 1 2 3 4; do
+            git push && exit 0
+            git pull --rebase origin main || exit 1
+          done
+          exit 1

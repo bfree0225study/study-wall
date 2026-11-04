@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>공부 기록장</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap">
+<style>
+/* 공부 기록장 화면. 이 파일은 Apps Script가 GitHub에서 불러와 보여 준다.
+   색과 글꼴은 :root 의 변수만 바꾸면 화면 전체에 반영된다. */
+:root {
+  --bg: #ffffff;          /* 바탕 */
+  --ink: #1c1f1e;         /* 글자 */
+  --ink-2: #5c6360;       /* 보조 글자 */
+  --line: #d5d9d6;        /* 얇은 선 */
+  --accent: #3a5cac;      /* 포인트 색 한 가지 */
+  --accent-soft: #d0def6; /* 포인트 색의 옅은 칸 */
+  --bar: #b4bcb8;         /* 기본 막대 */
+  --pen-blue: #3a5cac;    /* 노트의 파란 펜 = 공부 */
+  --pen-red: #c4463a;     /* 노트의 빨간 펜 = 공부 외 */
+  --hatch: #8f8a7e;
+  --blue-soft: #d0def6;   /* 칠한 공부 칸 (연하게) */
+  --red-soft: #f9d6d0;    /* 칠한 공부 외 칸 */
+  --sleep-soft: #cdcdcd;
+  --blue-wash: #eef3fb;   /* 시간표 토요일 칸 */
+  --red-wash: #fcefed;    /* 시간표 일요일 칸 */  /* 수면 칸 */
+  --font-text: "Gowun Dodum", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --font-num: "Gowun Dodum", "Noto Sans KR", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #26282a; --ink: #ebece9; --ink-2: #a7adaa; --line: #484c4e;
+  --accent: #6f93e0; --accent-soft: #34446b; --bar: #666d6e; --pen-blue: #6f93e0; --pen-red: #e27a6e; --hatch: #a7adaa; --blue-soft: #34446b; --red-soft: #5e3530; --sleep-soft: #3e4042; --blue-wash: #283247; --red-wash: #3b2a28; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #26282a; --ink: #ebece9; --ink-2: #a7adaa; --line: #484c4e;
+  --accent: #6f93e0; --accent-soft: #34446b; --bar: #666d6e; --pen-blue: #6f93e0; --pen-red: #e27a6e; --hatch: #a7adaa; --blue-soft: #34446b; --red-soft: #5e3530; --sleep-soft: #3e4042; --blue-wash: #283247; --red-wash: #3b2a28; color-scheme: dark }
+
+body { background: var(--bg); color: var(--ink); font-family: var(--font-text); font-size: 14px; line-height: 1.45; }
+.page { max-width: 1180px; margin: 0 auto; padding-block: 12px 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { margin: 0; font-weight: 600; text-wrap: balance; }
+h1 { font-size: 18px; }
+h2 { font-size: 15px; }
+button { font: inherit; color: inherit; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--ink); }
+.modes { display: flex; border: 1px solid var(--line); }
+.modes button { background: none; border: 0; padding: 6px 12px; cursor: pointer; }
+.modes button[aria-pressed="true"] { background: var(--blue-wash); color: var(--ink); }
+.mx { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; font-size: 0.36em; line-height: 1.1; margin-left: 0.12em; letter-spacing: 0; }
+.mx i { font-style: normal; padding-inline: 0.15em; }
+.mx i:first-child { border-bottom: 0.08em solid currentColor; }
+.act { display: inline-block; background: none; border: 1px solid var(--ink); padding: 6px 12px; color: var(--ink); cursor: pointer; }
+.act:disabled { color: var(--ink-2); border-color: var(--line); cursor: default; }
+.act.main { background: var(--ink); color: var(--bg); }
+.act:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.paint { padding: 8px 0 10px; border-bottom: 1px solid var(--ink); }
+.phead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.pnav { display: flex; gap: 4px; align-items: center; }
+.pnav button { background: none; border: 1px solid var(--line); min-width: 36px; min-height: 32px; padding: 0 8px; cursor: pointer; }
+.pbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--bg); padding-block: 6px; }
+.pens { display: flex; flex-wrap: wrap; gap: 4px; }
+.pen { min-width: 42px; min-height: 36px; padding: 0 8px; background: none; border: 1px solid var(--line); cursor: pointer; }
+.pen.study { color: var(--pen-blue); border-color: var(--pen-blue); }
+.pen.other { color: var(--pen-red); border-color: var(--pen-red); }
+.pen.sleep { color: var(--ink-2); border-color: var(--ink-2); }
+.pen[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: 1px; font-weight: 600; }
+.pen.study[aria-pressed="true"] { background: var(--blue-wash); }
+.pen.other[aria-pressed="true"] { background: var(--red-wash); }
+.padd { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 4px; font-size: 13px; }
+.padd input, .padd select { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 0; padding: 4px; min-width: 0; }
+.padd input { width: 6em; }
+.pg { display: grid; grid-template-columns: 26px repeat(7, minmax(0, 1fr)); --slot: 15px; }
+.pg .phd { text-align: center; font-size: 12.5px; line-height: 1.25; padding-bottom: 3px; border-bottom: 1px solid var(--ink); }
+.pg .phd small { display: block; color: var(--ink-2); font-size: 11px; font-family: var(--font-num); }
+
+.pg .phd .pd { font-size: 11px; color: var(--ink-2); font-weight: 400; font-family: var(--font-num); }
+.pg .phd small.left { font-size: 15px; line-height: 1.1; padding-top: 2px; }
+.pg .phd small.left .mx { font-size: 0.72em; }
+.pg .phd.sat { color: var(--pen-blue); background: var(--blue-soft); }
+.pg .phd.sun { color: var(--pen-red); background: var(--red-soft); }
+.pg .phd.now { box-shadow: inset 0 -3px 0 var(--pen-red); }
+.pg .phd { position: relative; white-space: nowrap; }
+.tt .head.sat { background: var(--blue-soft); }
+.tt .head.sun { background: var(--red-soft); }
+.frac i { display: block; font-style: normal; line-height: 1.15; }
+.frac i:first-child { width: 1.8em; margin-inline: auto; border-bottom: 1px solid currentColor; }
+.pg .ph { position: relative; height: calc(48 * var(--slot)); font-size: 10.5px; color: var(--ink-2); font-family: var(--font-num); }
+.pg .ph span { position: absolute; left: 0; transform: translateY(-50%); }
+.pg .pcol { border-left: 1px solid var(--line); user-select: none; -webkit-user-select: none; cursor: pointer; }
+.c.sep { box-shadow: inset 0 1px 0 var(--ink-2); }
+.c.half { line-height: calc(var(--slot) * 2 - 1px); }
+.pg .pcol { -webkit-touch-callout: none; }
+.pg.painting .pcol { touch-action: none; }
+.pg .pcol:last-of-type { border-right: 1px solid var(--line); }
+.c { box-sizing: border-box; height: var(--slot); line-height: calc(var(--slot) - 1px); font-size: 11px; text-align: center; white-space: nowrap; overflow: visible; border-bottom: 1px solid transparent; }
+.c:nth-child(2n) { border-bottom-color: var(--line); }
+.c:nth-child(24) { border-bottom-color: var(--ink-2); }
+.c.study { background: var(--blue-soft); color: var(--ink); }
+.c.other { background: var(--red-soft); color: var(--ink); }
+.c.sleep { background: var(--sleep-soft); }
+.c.plan-study { background: var(--blue-wash); color: var(--ink-2); }
+.c.plan-other, .c.plan-sleep { background: var(--red-wash); color: var(--ink-2); }
+.pg .psum { text-align: center; font-family: var(--font-num); font-size: 13px; padding-top: 3px; border-top: 1px solid var(--ink); }
+.pfoot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; font-size: 12.5px; color: var(--ink-2); padding-top: 4px; }
+
+.todo { padding: 4px 0 8px; }
+.todo ul { list-style: none; margin: 0; padding: 0; }
+.todo li button { background: none; border: 0; padding: 5px 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.todo .d { color: var(--ink-2); margin-right: 6px; font-family: var(--font-num); }
+.todo #todo-msg { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+.todo #todo-msg button { background: none; border: 1px solid var(--line); margin-left: 6px; padding: 2px 8px; cursor: pointer; }
+.todo #todo-t { width: 12em; }
+[hidden] { display: none !important; }
+.foot { padding-top: 10px; color: var(--ink-2); font-size: 12.5px; }
+
+html { background: var(--bg); }
+body { margin: 0; }
+.kinds { display: inline-flex; border: 1px solid var(--line); }
+.kinds button { background: none; border: 0; padding: 4px 10px; cursor: pointer; min-height: 30px; }
+.kinds button.study[aria-pressed="true"] { background: var(--blue-wash); color: var(--pen-blue); box-shadow: inset 0 -2px 0 var(--pen-blue); }
+.kinds button.other[aria-pressed="true"] { background: var(--red-wash); color: var(--pen-red); box-shadow: inset 0 -2px 0 var(--pen-red); }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <h1>공부 기록장</h1>
+    <div class="modes" role="group" aria-label="모드 선택">
+      <button id="mode-exam" type="button">시험 기간</button>
+      <button id="mode-general" type="button">일반</button>
+    </div>
+  </header>
+  <section class="paint" id="paint">
+    <div class="phead">
+      <h2 id="p-title"></h2>
+      <div class="pnav">
+        <button id="p-prev" type="button" aria-label="지난주">‹</button>
+        <button id="p-now" type="button">이번 주</button>
+        <button id="p-next" type="button" aria-label="다음 주">›</button>
+      </div>
+    </div>
+    <div class="pbar">
+      <div class="pens" id="pens" role="group" aria-label="칠할 항목"></div>
+      <form class="padd" id="p-add">
+        <input id="p-add-t" aria-label="새 항목 이름" maxlength="6" placeholder="새 항목">
+        <span class="kinds" role="group" aria-label="새 항목 종류">
+          <button class="study" type="button" data-kind="study" aria-pressed="true">공부</button>
+          <button class="other" type="button" data-kind="other" aria-pressed="false">공부 외</button>
+        </span>
+        <button class="act" type="submit">추가</button>
+      </form>
+    </div>
+    <div class="todo">
+      <ul id="todo-list"></ul>
+      <p id="todo-msg"></p>
+      <form class="padd" id="todo-add">
+        <input id="todo-t" aria-label="해야 할 일" maxlength="30" placeholder="해야 할 일">
+        <input id="todo-d" type="date" aria-label="날짜(없어도 됨)">
+        <button class="act" type="submit">추가</button>
+      </form>
+    </div>
+    <div class="pg" id="pg"></div>
+    <div class="pfoot"><span id="p-sum"></span><span id="p-msg" role="status">불러오는 중입니다.</span></div>
+  </section>
+</div>
+
+<script>
+/* ---------- 서버 연결 (Apps Script) ---------- */
+// 서버 함수: load(k) -> {days: [문서], plan: {이름: 문서}},  save(k, [{key, doc}])
+const call = (fn, ...args) => new Promise((ok, fail) =>
+  google.script.run.withSuccessHandler(ok).withFailureHandler(fail)[fn](window.__K, ...args));
+
+/* ---------- 날짜·시간 도구 ---------- */
+const WD = ['월', '화', '수', '목', '금', '토', '일'];
+const SLOTS = 48;   // 하루 48칸, 한 칸 30분
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const between = (a, b) => Math.round((b - a) / 864e5);
+const wdIdx = d => (d.getDay() + 6) % 7;
+const md = s => { const d = parse(s); return (d.getMonth() + 1) + '/' + d.getDate(); };
+const h1 = n => (Math.round(n * 10) / 10).toFixed(1).replace(/\.0$/, '');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const realToday = () => parse(ymd(new Date()));
+const slotTime = i => pad(Math.floor(i / 2)) + ':' + (i % 2 ? '30' : '00');
+const timeSlot = t => { const [h, m] = String(t).split(':').map(Number); return Math.round(h * 2 + m / 30); };
+// 남은 날을 주 단위 대분수로: 40일 -> -5 5/7
+const mixed = n => { const w = Math.floor(n / 7), r = n % 7;
+  return (w || !r ? '-' + w : '-') + (r ? `<span class="mx" aria-label="${w}주 ${r}일"><i>${r}</i><i>7</i></span>` : ''); };
+
+/* ---------- 저장된 값 ---------- */
+let store = {days: {}, plan: {}};
+const planItems = k => (store.plan[k] && Array.isArray(store.plan[k].items)) ? store.plan[k].items : [];
+const BASE_LABELS = [
+  {t: '수면', type: 'sleep'},
+  {t: '영어', type: 'study', subject: '영어'}, {t: '미적', type: 'study', subject: '미적'}, {t: '기하', type: 'study', subject: '기하'},
+  {t: '화학', type: 'study', subject: '화학'}, {t: '국어', type: 'study', subject: '국어'},
+  {t: '물리', type: 'study', subject: '물리'}, {t: '데이터과학', type: 'study', subject: '데이터과학'},
+  {t: '등', type: 'other', kind: '운동'}, {t: '가슴', type: 'other', kind: '운동'},
+  {t: '하체', type: 'other', kind: '운동'}, {t: '수행', type: 'other', kind: '기타'}];
+const labels = () => [...BASE_LABELS, ...planItems('labels')];
+const shortName = s => (labels().find(l => l.subject === s) || {}).t || s;
+
+/* ---------- 모드 (시험 기간 / 일반) ---------- */
+let mode = null;
+function firstMode() {
+  try { const m = localStorage.getItem('study-mode'); if (m) return m; } catch (e) {}
+  return planItems('exams').some(e => e.date >= ymd(realToday())) ? 'exam' : 'general';
+}
+function setMode(m) {
+  mode = m;
+  try { localStorage.setItem('study-mode', m); } catch (e) {}
+  $('mode-exam').setAttribute('aria-pressed', m === 'exam');
+  $('mode-general').setAttribute('aria-pressed', m === 'general');
+  if (loaded) drawGrid();
+}
+
+/* ---------- 칸 칠하기 ---------- */
+// 저장 모양: days/<날짜> = {date, spans: [[시작, 끝, 글자, 종류]], sleep: 잔 시간}
+let pWeek = 0, pen = undefined, pCells = {}, pDirty = new Set(), pTimer = null, loaded = false;
+let pLater = false;   // 켜면 연한 칸(앞으로 할 일)으로 칠한다
+let pUndo = [];       // 끌 때마다 칠하기 전 상태를 쌓는다 (최대 30번)
+let newKind = 'study';
+const pDates = () => { const m = addDays(realToday(), pWeek * 7 - wdIdx(realToday())); return WD.map((_, i) => ymd(addDays(m, i))); };
+const pSay = t => { $('p-msg').textContent = t; };
+
+function cellsOf(date) {
+  const a = Array(SLOTS).fill(''), d = store.days[date];
+  if (!d) return a;
+  if (Array.isArray(d.spans)) {
+    d.spans.forEach(([s, e, t, k]) => { for (let i = timeSlot(s); i < timeSlot(e) && i < SLOTS; i++) a[i] = k + '|' + t; });
+  } else (d.logs || []).forEach(l => {   // 예전에 사진·글로 넣은 날은 기록에서 칸을 만든다
+    const from = timeSlot(l.start), n = Math.max(1, Math.round(l.hours * 2));
+    const study = ['학원', '자습', '인강'].includes(l.kind);
+    const v = study ? 'study|' + shortName(l.subject || l.note || l.kind) : 'other|' + (l.note || l.kind);
+    for (let i = from; i < from + n && i < SLOTS; i++) a[i] = v;
+  });
+  return a;
+}
+function spansOf(a) {
+  const out = [];
+  for (let i = 0; i < SLOTS;) {
+    if (!a[i]) { i++; continue; }
+    let j = i; while (j < SLOTS && a[j] === a[i]) j++;
+    const [k, t] = a[i].split('|');
+    out.push([slotTime(i), j === SLOTS ? '24:00' : slotTime(j), t, k]); i = j;
+  }
+  return out;
+}
+const dayDoc = date => ({date, spans: spansOf(pCells[date]), sleep: pCells[date].filter(v => v.startsWith('sleep|')).length / 2 || null});
+
+// 저장은 칠하기를 멈추고 잠시 뒤 한 번에 한다. 저장 중에 또 칠하면 끝난 뒤 다시 저장한다.
+let saving = false;
+async function pSave() {
+  clearTimeout(pTimer); pTimer = null;
+  const dates = [...pDirty];
+  if (!dates.length) return;
+  if (saving) { pTimer = setTimeout(pSave, 800); return; }
+  saving = true; pSay('저장 중');
+  const ops = dates.map(d => ({key: 'days/' + d, doc: dayDoc(d)}));
+  const sent = ops.map(o => JSON.stringify(o.doc.spans));
+  try {
+    await call('save', ops);
+    ops.forEach((o, i) => {
+      store.days[o.doc.date] = o.doc;
+      if (JSON.stringify(spansOf(pCells[o.doc.date])) === sent[i]) pDirty.delete(o.doc.date);
+    });
+    pSay(pDirty.size ? '저장 중' : '저장됨');
+  } catch (e) {
+    pSay('저장하지 못했습니다. 인터넷을 확인한 뒤 아무 칸이나 다시 칠해 주세요.');
+  } finally {
+    saving = false;
+    if (pDirty.size && !pTimer) pTimer = setTimeout(pSave, 800);
+  }
+}
+
+function drawCol(date) {
+  const col = document.querySelector(`.pcol[data-d="${date}"]`); if (!col) return;
+  const a = pCells[date];
+  // 글자는 같은 항목이 이어진 구간의 가운데에 적는다.
+  const lab = {};
+  for (let s = 0; s < SLOTS;) { let e = s; while (e < SLOTS && a[e] === a[s]) e++; if (a[s] && !a[s].startsWith('sleep|')) lab[Math.floor((s + e - 1) / 2)] = (e - s) % 2 === 0; s = e; }
+  [...col.children].forEach((el, i) => {
+    const [k = '', t = ''] = a[i].split('|');
+    el.className = 'c' + (k ? ' ' + k : '') + (k && i > 0 && a[i - 1] && a[i - 1] !== a[i] ? ' sep' : '') + (lab[i] ? ' half' : '');
+    el.textContent = i in lab ? t : '';
+  });
+  const h = a.filter(v => v.startsWith('study|')).length / 2;
+  const sum = document.querySelector(`.psum[data-d="${date}"]`); if (sum) sum.textContent = h ? h1(h) : '·';
+  drawSum();
+}
+function drawSum() {
+  const ds = pDates(), all = ds.flatMap(d => pCells[d] || []);
+  const study = all.filter(v => v.startsWith('study|')).length / 2;
+  const nights = ds.filter(d => (pCells[d] || []).some(v => v.startsWith('sleep|'))).length;
+  const sl = all.filter(v => v.startsWith('sleep|')).length / 2;
+  $('p-sum').textContent = `주간 ${h1(study)}시간 · 평균 수면 ${nights ? h1(sl / nights) + '시간' : '–'}`;
+}
+function drawPens() {
+  $('pg').classList.toggle('painting', pen !== undefined);
+  const mark = l => !!pen && l.t === pen.t;
+  $('pens').innerHTML = labels().map((l, i) => `<button class="pen ${l.type}" type="button" data-pen="${i}" aria-pressed="${mark(l)}">${esc(l.t)}</button>`).join('')
+    + `<button class="pen" type="button" data-pen="-1" aria-pressed="${pen === null}">지우개</button>`
+    + `<button class="pen" type="button" data-later aria-pressed="${pLater}">할 일로 칠하기</button>`
+    + `<button class="pen" type="button" data-undo${pUndo.length ? '' : ' disabled'}>되돌리기</button>`;
+}
+// 요일 밑에 그날 기준 시험까지 남은 기간(주 단위 대분수). 일반 모드에서는 적지 않는다.
+function leftOf(d) {
+  const ex = planItems('exams').map(e => e.date).filter(x => x >= d).sort()[0];
+  return ex && mode !== 'general' ? mixed(between(parse(d), parse(ex))) : '';
+}
+function drawGrid() {
+  const ds = pDates(), t = ymd(realToday());
+  $('p-title').textContent = pWeek === 0 ? '' : md(ds[0]) + '~' + md(ds[6]);
+  let html = '<div></div>' + ds.map((d, i) => `<div class="phd${i === 5 ? ' sat' : i === 6 ? ' sun' : ''}${d === t ? ' now' : ''}">${WD[i]} <span class="pd">${md(d)}</span><small class="left">${leftOf(d)}</small></div>`).join('');
+  // 시각: 매 시간 (12 1 2 ... 11 12 1 ... 12). 낮 12시에만 진한 선.
+  html += '<div class="ph">' + Array.from({length: 25}, (_, h) => `<span style="top:${h / 24 * 100}%">${h % 12 || 12}</span>`).join('') + '</div>';
+  html += ds.map(d => `<div class="pcol" data-d="${d}">${'<div class="c"></div>'.repeat(SLOTS)}</div>`).join('');
+  html += '<div></div>' + ds.map(d => `<div class="psum" data-d="${d}"></div>`).join('');
+  $('pg').innerHTML = html;
+  ds.forEach(d => { if (!pDirty.has(d)) pCells[d] = cellsOf(d); drawCol(d); });
+}
+
+/* ---------- 해야 할 일 ---------- */
+// 누르면 완료로 보고 지운다(되돌리기 있음). 날짜가 지난 것은 보이지 않는다.
+let lastDone = null;
+function drawTodos() {
+  const t = ymd(realToday());
+  const rows = planItems('tasks').map((x, i) => ({x, i})).filter(({x}) => !x.start && (!x.date || x.date >= t))
+    .sort((a, b) => (a.x.date || '9999') < (b.x.date || '9999') ? -1 : 1);
+  $('todo-list').innerHTML = rows.map(({x, i}) => `<li><button type="button" data-todo="${i}">☐ ${x.date ? `<span class="d">${md(x.date)}</span>` : ''}${esc(x.title)}</button></li>`).join('');
+}
+async function saveTasks(items, msg) {
+  store.plan.tasks = {items}; drawTodos(); $('todo-msg').innerHTML = msg;
+  try { await call('save', [{key: 'plan/tasks', doc: {items}}]); }
+  catch (e) { $('todo-msg').textContent = '저장하지 못했습니다. 새로고침한 뒤 다시 해 주세요.'; }
+}
+$('todo-list').addEventListener('click', e => {
+  const b = e.target.closest('[data-todo]'); if (!b || !loaded) return;
+  const items = [...planItems('tasks')], [done] = items.splice(Number(b.dataset.todo), 1);
+  lastDone = done;
+  saveTasks(items, `완료: ${esc(done.title)}<button type="button" data-todo-undo>되돌리기</button>`);
+});
+$('todo-msg').addEventListener('click', e => {
+  if (!e.target.closest('[data-todo-undo]') || !lastDone) return;
+  const item = lastDone; lastDone = null;
+  saveTasks([...planItems('tasks'), item], '');
+});
+$('todo-add').addEventListener('submit', e => {
+  e.preventDefault();
+  const title = $('todo-t').value.trim(); if (!title || !loaded) return;
+  saveTasks([...planItems('tasks'), {date: $('todo-d').value || '', subject: '', title}], '');
+  $('todo-t').value = ''; $('todo-d').value = '';
+});
+
+/* ---------- 칠하기 동작 ---------- */
+// 항목을 고르면 칸 위에서 바로 끌어 칠한다. 고른 항목을 한 번 더 누르면 선택이 풀리고, 그때는 끌면 화면이 움직인다.
+let pDrag = null, hold = null;
+const slotAt = (col, y) => { const r = col.getBoundingClientRect(); return Math.max(0, Math.min(SLOTS - 1, Math.floor((y - r.top) / r.height * SLOTS))); };
+function pFill(i) {
+  const a = pCells[pDrag.date], step = i >= pDrag.last ? 1 : -1;
+  for (let k = pDrag.last; ; k += step) { a[k] = pDrag.value; if (k === i) break; }
+  pDrag.last = i; drawCol(pDrag.date);
+}
+function pCommit() { if (!pDrag) return; pDirty.add(pDrag.date); pDrag = null; clearTimeout(pTimer); pTimer = setTimeout(pSave, 600); drawPens(); }
+function pBack() {
+  const u = pUndo.pop(); if (!u) return;
+  pCells[u.date] = u.cells; drawCol(u.date); pDirty.add(u.date);
+  clearTimeout(pTimer); pTimer = setTimeout(pSave, 600); drawPens();
+}
+const painting = () => pen !== undefined;
+$('pg').addEventListener('pointerdown', e => {
+  const col = e.target.closest('.pcol'); if (!col || !painting() || hold || !loaded) return;
+  e.preventDefault();
+  const date = col.dataset.d, i = slotAt(col, e.clientY), v = pen ? (pLater ? 'plan-' : '') + pen.type + '|' + pen.t : '';
+  hold = {id: e.pointerId, col};
+  pUndo.push({date, cells: [...pCells[date]]}); if (pUndo.length > 30) pUndo.shift();
+  pDrag = {date, last: i, value: pCells[date][i] === v ? '' : v};  // 같은 항목 칸에서 시작하면 지운다
+  try { col.setPointerCapture(e.pointerId); } catch (err) {}
+  pFill(i);
+});
+$('pg').addEventListener('pointermove', e => { if (hold && e.pointerId === hold.id && pDrag) pFill(slotAt(hold.col, e.clientY)); });
+$('pg').addEventListener('contextmenu', e => { if (e.target.closest('.pcol')) e.preventDefault(); });
+const pUp = e => { if (!hold || e.pointerId !== hold.id) return; hold = null; pCommit(); };
+$('pg').addEventListener('pointerup', pUp);
+$('pg').addEventListener('pointercancel', pUp);
+$('pens').addEventListener('click', e => {
+  if (e.target.closest('[data-undo]')) { pBack(); return; }
+  if (e.target.closest('[data-later]')) { pLater = !pLater; drawPens(); return; }
+  const b = e.target.closest('[data-pen]'); if (!b) return;
+  const i = Number(b.dataset.pen), next = i < 0 ? null : labels()[i];
+  pen = (next === null ? pen === null : pen && next && pen.t === next.t) ? undefined : next;  // 고른 것을 다시 누르면 선택 해제
+  drawPens();
+});
+const pGo = n => { if (pTimer) pSave(); pWeek = n; pUndo = []; drawPens(); drawGrid(); };
+$('p-prev').addEventListener('click', () => pGo(pWeek - 1));
+$('p-next').addEventListener('click', () => pGo(pWeek + 1));
+$('p-now').addEventListener('click', () => pGo(0));
+
+/* ---------- 새 항목 추가 ---------- */
+document.querySelector('.kinds').addEventListener('click', e => {
+  const b = e.target.closest('[data-kind]'); if (!b) return;
+  newKind = b.dataset.kind;
+  document.querySelectorAll('.kinds button').forEach(x => x.setAttribute('aria-pressed', x.dataset.kind === newKind));
+});
+$('p-add').addEventListener('submit', async e => {
+  e.preventDefault();
+  const t = $('p-add-t').value.trim();
+  if (!t || t.includes('|') || !loaded) return;
+  if (labels().some(l => l.t === t)) { pen = labels().find(l => l.t === t); drawPens(); $('p-add-t').value = ''; return; }
+  const item = newKind === 'study' ? {t, type: 'study', subject: t} : {t, type: 'other', kind: '기타'};
+  const items = [...planItems('labels'), item];
+  store.plan.labels = {items}; pen = item; $('p-add-t').value = ''; drawPens();
+  try { await call('save', [{key: 'plan/labels', doc: {items}}]); }
+  catch (err) { pSay('항목을 저장하지 못했습니다. 새로고침한 뒤 다시 해 주세요.'); }
+});
+
+/* ---------- 불러오기 ---------- */
+async function refresh() {
+  const got = await call('load');
+  store = {days: Object.fromEntries((got.days || []).filter(d => d && d.date).map(d => [d.date, d])), plan: got.plan || {}};
+  if (!mode) setMode(firstMode());
+  loaded = true;
+  drawTodos();
+  if (pDrag) return;
+  drawPens(); drawGrid();
+}
+// 다른 기기에서 칠한 것을 보이게, 화면으로 돌아올 때 다시 불러온다. 숨길 때는 남은 저장을 끝낸다.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { if (pTimer) pSave(); }
+  else if (loaded && !pDirty.size && !saving) refresh().catch(() => {});
+});
+$('mode-exam').addEventListener('click', () => setMode('exam'));
+$('mode-general').addEventListener('click', () => setMode('general'));
+refresh().then(() => pSay('')).catch(() => pSay('불러오지 못했습니다. 주소(북마크)가 맞는지 확인하고 새로고침해 주세요.'));
+</script>
+</body>
+</html>

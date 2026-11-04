@@ -108,7 +108,8 @@ def main(folder):
     data = {"exam": {"name": wall.get("name", "시험"), "date": upcoming[0]["date"]} if upcoming else None,
             "days": days, "weekly": weekly, "plan": plan, "notes": notes,
             "todos": sorted(todos, key=lambda x: x["d"] or "9999")}
-    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json"), "w", encoding="utf-8") as f:
+    sfx = os.environ.get("WALL_SUFFIX", "")  # 시험 기간에는 data_new.json으로 따로 쓴다
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), f"data{sfx}.json"), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=1, sort_keys=True)
 
 
