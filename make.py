@@ -107,6 +107,31 @@ def footer(g, stats, L, R, y, u):
         x += text_w(g, value, fb) + 30 * u
 
 
+def todo_list(g, data, today, L, R, y, u):
+    """시계와 머리말 사이 빈 자리에 해야 할 일(날짜 있는 것은 지난 뒤 사라짐)을 적는다."""
+    items = [t for t in data.get("todos", []) if not t["d"] or t["d"] >= today.isoformat()]
+    if not items:
+        return
+    more, items = len(items) - 2, items[:2]
+    fd, gap, box = font(SANS, int(28 * u)), 48 * u, 24 * u
+    first = y - 8 * u - gap * (len(items) - 1)
+    for i, t in enumerate(items):
+        b = first + gap * i
+        g.rectangle((L, b - box, L + box, b), outline=INK_SOFT, width=max(2, int(2 * u)))
+        x = L + box + 14 * u
+        if t["d"]:
+            d = datetime.date.fromisoformat(t["d"])
+            ds = f"{d.month}/{d.day}"
+            g.text((x, b), ds, font=fd, fill=INK_SOFT, anchor="ls")
+            x += text_w(g, ds, fd) + 14 * u
+        size = 34
+        while size > 20 and x + text_w(g, t["t"], font(SANS, int(size * u))) > R - 60 * u:
+            size -= 2
+        g.text((x, b), t["t"], font=font(SANS, int(size * u)), fill=INK, anchor="ls")
+    if more > 0:
+        g.text((R, b), f"+{more}", font=fd, fill=INK_SOFT, anchor="rs")
+
+
 def draw(data, today, W, H, out):
     u = W / 1080
     im = Image.new("RGB", (W * SS, H * SS), PAPER)
@@ -121,6 +146,7 @@ def draw(data, today, W, H, out):
     grid_l = L + axis
     col = (R - grid_l) / 7
     y = header(g, data, today, W, L, R, H * TOP_EMPTY, u)
+    todo_list(g, data, today, L, R, H * TOP_EMPTY, u)
 
     monday = today - datetime.timedelta(days=today.weekday())
     dates = [monday + datetime.timedelta(days=i) for i in range(7)]

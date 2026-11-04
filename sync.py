@@ -74,7 +74,7 @@ def main(folder):
     weekly = [{"dow": t["day"], "s": t["start"], "e": t["end"], "t": SHORT.get(t["title"], t["title"]),
                "k": "study" if t.get("kind") in STUDY else "other"}
               for t in table if t.get("kind") not in ("학교", "운동")]
-    plan, notes = [], {}
+    plan, notes, todos = [], {}, []
 
     # 운동 시간에는 3분할 순서대로 다음에 할 부위를 적는다.
     last = None
@@ -96,7 +96,7 @@ def main(folder):
         if t.get("start") and t.get("end"):
             plan.append({"d": t["date"], "s": t["start"], "e": t["end"], "k": "other", "t": t.get("short") or t["title"]})
         else:
-            notes.setdefault(t["date"], []).append(t.get("short") or t["title"])
+            todos.append({"d": t.get("date") or "", "t": t.get("short") or t["title"]})
     # 기록장에서 "할 일로 칠하기"로 칠한 연한 칸
     for date in week & set(every):
         for s, e, t, k in every[date].get("spans") or []:
@@ -106,7 +106,8 @@ def main(folder):
         notes.setdefault(e["date"], []).append(SHORT.get(e["subject"], e["subject"]) + " 시험")
 
     data = {"exam": {"name": wall.get("name", "시험"), "date": upcoming[0]["date"]} if upcoming else None,
-            "days": days, "weekly": weekly, "plan": plan, "notes": notes}
+            "days": days, "weekly": weekly, "plan": plan, "notes": notes,
+            "todos": sorted(todos, key=lambda x: x["d"] or "9999")}
     with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "data.json"), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=1, sort_keys=True)
 
