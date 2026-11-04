@@ -112,8 +112,8 @@ def todo_list(g, data, today, L, R, y, u):
     items = [t for t in data.get("todos", []) if not t["d"] or t["d"] >= today.isoformat()]
     if not items:
         return
-    more, items = len(items) - 2, items[:2]
-    fd, gap, box = font(SANS, int(28 * u)), 48 * u, 24 * u
+    more, items = len(items) - 3, items[:3]
+    fd, gap, box = font(SANS, int(27 * u)), 40 * u, 22 * u
     first = y - 8 * u - gap * (len(items) - 1)
     for i, t in enumerate(items):
         b = first + gap * i
@@ -124,7 +124,7 @@ def todo_list(g, data, today, L, R, y, u):
             ds = f"{d.month}/{d.day}"
             g.text((x, b), ds, font=fd, fill=INK_SOFT, anchor="ls")
             x += text_w(g, ds, fd) + 14 * u
-        size = 34
+        size = 32
         while size > 20 and x + text_w(g, t["t"], font(SANS, int(size * u))) > R - 60 * u:
             size -= 2
         g.text((x, b), t["t"], font=font(SANS, int(size * u)), fill=INK, anchor="ls")
