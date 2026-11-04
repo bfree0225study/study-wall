@@ -204,7 +204,7 @@ def draw(data, today, W, H, out):
         strong = h % 12 == 0  # 위아래 테두리와 낮 12시만 진하게
         g.line((grid_l, Y(h), R, Y(h)), fill=RULE_STRONG if strong else RULE,
                width=max(1, int((2 if strong else 1) * u)))
-        if h % 3 == 0:
+        if True:  # 모든 시각을 적는다 (12 1 2 ... 11 12 ... 12)
             # 시각 글자는 해당 줄 높이의 가운데에 맞춘다.
             g.text((grid_l - 10 * u, Y(h)), str(h % 12 or 12), font=f_axis, fill=INK_SOFT, anchor="rm")
     for i in range(8):
