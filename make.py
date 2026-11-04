@@ -87,10 +87,10 @@ def header(g, data, today, W, L, R, y, u):
     left = (datetime.date.fromisoformat(exam["date"]) - today).days
     fs, fb = font(SANS, int(36 * u)), font(SERIF, int(104 * u))
     base = y + 98 * u
-    name = f"{exam['name']}까지"
+    name = exam["name"]
     g.text((L, base), name, font=fs, fill=INK_SOFT, anchor="ls")
     x = L + text_w(g, name, fs) + 22 * u
-    g.text((x, base), f"{max(left, 0)}일", font=fb, fill=INK, anchor="ls")
+    g.text((x, base), f"D-{max(left, 0)}", font=fb, fill=INK, anchor="ls")
     return y + 136 * u
 
 
