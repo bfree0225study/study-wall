@@ -51,7 +51,7 @@ def main(folder):
             every[d["date"]] = d
 
     def workouts(d):
-        spans = [t for _, _, t, _ in d.get("spans") or [] if t in SPLIT]
+        spans = [t for _, _, t, k in d.get("spans") or [] if t in SPLIT and not k.startswith("plan-")]
         return spans or [l.get("note") for l in d.get("logs", []) if l.get("note") in SPLIT]
 
     days = {}
@@ -61,7 +61,7 @@ def main(folder):
         if isinstance(d.get("spans"), list):
             days[d["date"]] = {
                 "sleep": [[s, e] for s, e, _, k in d["spans"] if k == "sleep"],
-                "blocks": [[s, e, k, t] for s, e, t, k in d["spans"] if k != "sleep"],
+                "blocks": [[s, e, k, t] for s, e, t, k in d["spans"] if k != "sleep" and not k.startswith("plan-")],
             }
         else:
             days[d["date"]] = {"sleep": [], "blocks": from_logs(d)}
@@ -97,6 +97,11 @@ def main(folder):
             plan.append({"d": t["date"], "s": t["start"], "e": t["end"], "k": "other", "t": t.get("short") or t["title"]})
         else:
             notes.setdefault(t["date"], []).append(t.get("short") or t["title"])
+    # 기록장에서 "할 일로 칠하기"로 칠한 연한 칸
+    for date in week & set(every):
+        for s, e, t, k in every[date].get("spans") or []:
+            if k.startswith("plan-"):
+                plan.append({"d": date, "s": s, "e": e, "t": t, "k": "study" if k == "plan-study" else "other"})
     for e in exams:
         notes.setdefault(e["date"], []).append(SHORT.get(e["subject"], e["subject"]) + " 시험")
 
