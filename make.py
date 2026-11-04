@@ -157,10 +157,9 @@ def draw(data, today, W, H, out):
             md = f"{d.month}/{d.day}"
             g.text((cx - text_w(g, md, f_date) / 2, y + 56 * u), md, font=f_date, fill=INK_SOFT)
         if d == today:
-            # 오늘은 요일 왼쪽에 빨간 체크 표시
-            hx = cx - tw / 2 - 30 * u
-            g.line([(hx, y + 14 * u), (hx + 9 * u, y + 24 * u), (hx + 24 * u, y + 2 * u)],
-                   fill=(196, 52, 44), width=max(3, int(4 * u)), joint="curve")
+            # 오늘은 대분수 밑에 빨간 선
+            g.line((grid_l + col * i + 8 * u, y + 108 * u, grid_l + col * (i + 1) - 8 * u, y + 108 * u),
+                   fill=(196, 52, 44), width=max(3, int(5 * u)))
     top = y + 118 * u
 
     foot_h = 96 * u
