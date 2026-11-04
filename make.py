@@ -83,15 +83,16 @@ def header(g, data, today, W, L, R, y, u):
     """머리말: 남은 기간을 주 단위 대분수로 (-5 5/7 = 5주 5일)."""
     exam = data.get("exam")
     if not exam:
-        return y + 136 * u
+        return y + 136 * u, L
     left = (datetime.date.fromisoformat(exam["date"]) - today).days
     fs, fb = font(SANS, int(36 * u)), font(SERIF, int(104 * u))
     base = y + 98 * u
     name = exam["name"]
     g.text((L, base), name, font=fs, fill=INK_SOFT, anchor="ls")
     x = L + text_w(g, name, fs) + 22 * u
-    g.text((x, base), f"D-{max(left, 0)}", font=fb, fill=INK, anchor="ls")
-    return y + 136 * u
+    dday = f"D-{max(left, 0)}"
+    g.text((x, base), dday, font=fb, fill=INK, anchor="ls")
+    return y + 136 * u, x + text_w(g, dday, fb)
 
 
 def footer(g, stats, L, R, y, u):
@@ -107,18 +108,19 @@ def footer(g, stats, L, R, y, u):
         x += text_w(g, value, fb) + 30 * u
 
 
-def todo_list(g, data, today, L, R, y, u):
-    """시계와 머리말 사이 빈 자리에 해야 할 일(날짜 있는 것은 지난 뒤 사라짐)을 적는다."""
+def todo_list(g, data, today, x0, R, y, u):
+    """머리말 줄 오른쪽 빈 자리(D-day 옆)에 해야 할 일을 적는다. 날짜 있는 것은 지난 뒤 사라진다."""
     items = [t for t in data.get("todos", []) if not t["d"] or t["d"] >= today.isoformat()]
     if not items:
         return
     more, items = len(items) - 3, items[:3]
-    fd, gap, box = font(SANS, int(27 * u)), 40 * u, 22 * u
-    first = y - 8 * u - gap * (len(items) - 1)
+    fd, gap, box = font(SANS, int(27 * u)), 38 * u, 22 * u
+    first = y + 26 * u
+    left = x0 + 40 * u
     for i, t in enumerate(items):
         b = first + gap * i
-        g.rectangle((L, b - box, L + box, b), outline=INK_SOFT, width=max(2, int(2 * u)))
-        x = L + box + 14 * u
+        g.rectangle((left, b - box, left + box, b), outline=INK_SOFT, width=max(2, int(2 * u)))
+        x = left + box + 14 * u
         if t["d"]:
             d = datetime.date.fromisoformat(t["d"])
             ds = f"{d.month}/{d.day}"
@@ -145,8 +147,9 @@ def draw(data, today, W, H, out):
     L, R = margin, W - margin
     grid_l = L + axis
     col = (R - grid_l) / 7
-    y = header(g, data, today, W, L, R, H * TOP_EMPTY, u)
-    todo_list(g, data, today, L, R, H * TOP_EMPTY, u)
+    y0 = H * TOP_EMPTY
+    y, dday_end = header(g, data, today, W, L, R, y0, u)
+    todo_list(g, data, today, dday_end, R, y0, u)
 
     monday = today - datetime.timedelta(days=today.weekday())
     dates = [monday + datetime.timedelta(days=i) for i in range(7)]
@@ -274,8 +277,8 @@ def draw(data, today, W, H, out):
              ("하루 평균 공부", f"{label(week_study / passed)}시간" if passed else "–"),
              ("평균 수면", f"{label(sleep_hours / sleep_days)}시간" if sleep_days else "–")]
     footer(g, stats, L, R, bottom + total_h, u)
-    # 갱신 날짜는 머리말 줄 오른쪽에 둔다.
-    g.text((R, H * TOP_EMPTY + 98 * u), stamp, font=font(SANS, int(24 * u)), fill=INK_SOFT, anchor="rs")
+    # 갱신 날짜는 머리말 줄 바로 위 오른쪽에 둔다.
+    g.text((R, H * TOP_EMPTY - 10 * u), stamp, font=font(SANS, int(24 * u)), fill=INK_SOFT, anchor="rs")
     im.resize((W // SS, H // SS), Image.LANCZOS).save(out, optimize=True)
 
 
