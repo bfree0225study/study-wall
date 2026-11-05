@@ -143,7 +143,7 @@ def todo_list(g, data, today, x0, R, y, u, scale=1.0):
         g.text((R, last + gap * 0.9), f"+{more}", font=fd, fill=INK_SOFT, anchor="rs")
 
 
-def draw(data, today, W, H, out, todo_scale=1.0):
+def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_empty=BOTTOM_EMPTY):
     u = W / 1080
     im = Image.new("RGB", (W * SS, H * SS), PAPER)
     g = ImageDraw.Draw(im)
@@ -156,7 +156,7 @@ def draw(data, today, W, H, out, todo_scale=1.0):
     L, R = margin, W - margin
     grid_l = L + axis
     col = (R - grid_l) / 7
-    y0 = H * TOP_EMPTY
+    y0 = H * top_empty
     y, dday_end = header(g, data, today, W, L, R, y0, u)
     todo_list(g, data, today, dday_end, R, y0, u, todo_scale)
 
@@ -204,7 +204,7 @@ def draw(data, today, W, H, out, todo_scale=1.0):
 
     foot_h = 96 * u
     total_h = 50 * u
-    bottom = H * (1 - BOTTOM_EMPTY) - foot_h - total_h
+    bottom = H * (1 - bottom_empty) - foot_h - total_h
     hour = (bottom - top) / 24
     Y = lambda h: top + hour * h
     X = lambda i: grid_l + col * i
@@ -302,5 +302,6 @@ if __name__ == "__main__":
     with open(os.path.join(base, f"data{sfx}.json"), encoding="utf-8") as f:
         data = json.load(f)
     today = datetime.datetime.now(KST).date()
-    draw(data, today, 1080, 2340, os.path.join(base, f"phone{sfx}.png"), todo_scale=1.2)
+    draw(data, today, 1080, 2340, os.path.join(base, f"phone{sfx}.png"), todo_scale=1.2,
+         top_empty=0.28, bottom_empty=0.10)  # 폰만 위아래 여백을 줄여 세로로 늘림
     draw(data, today, 1200, 1920, os.path.join(base, f"tablet{sfx}.png"))
