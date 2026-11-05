@@ -111,7 +111,7 @@ def footer(g, stats, L, R, y, u):
         x += text_w(g, value, fb) + 30 * u
 
 
-def todo_list(g, data, today, x0, R, y, u):
+def todo_list(g, data, today, x0, R, y, u, scale=1.0):
     """머리말 줄 오른쪽 빈 자리(D-day 옆)에 해야 할 일을 모두 적는다.
     맨 아래 줄 자리는 고정하고, 많아지면 위쪽 빈 공간으로 늘린다. 많을수록 글자와 간격이 줄어든다.
     날짜 있는 것은 지난 뒤 사라진다."""
@@ -121,7 +121,7 @@ def todo_list(g, data, today, x0, R, y, u):
     MAXN = 14
     more, items = len(items) - MAXN, items[:MAXN]
     n = len(items)
-    k = 1.0 if n <= 4 else max(0.62, 1 - 0.07 * (n - 4))   # 많을수록 작게
+    k = (1.0 if n <= 4 else max(0.62, 1 - 0.07 * (n - 4))) * scale   # 많을수록 작게, scale은 기기별 확대
     fd, gap, box = font(SANS, int(27 * u * k)), 38 * u * k, 22 * u * k
     last = y + 102 * u                 # 맨 아래 줄의 글자 밑선 (3개일 때와 같은 자리)
     left = x0 + 40 * u
@@ -143,7 +143,7 @@ def todo_list(g, data, today, x0, R, y, u):
         g.text((R, last + gap * 0.9), f"+{more}", font=fd, fill=INK_SOFT, anchor="rs")
 
 
-def draw(data, today, W, H, out):
+def draw(data, today, W, H, out, todo_scale=1.0):
     u = W / 1080
     im = Image.new("RGB", (W * SS, H * SS), PAPER)
     g = ImageDraw.Draw(im)
@@ -158,7 +158,7 @@ def draw(data, today, W, H, out):
     col = (R - grid_l) / 7
     y0 = H * TOP_EMPTY
     y, dday_end = header(g, data, today, W, L, R, y0, u)
-    todo_list(g, data, today, dday_end, R, y0, u)
+    todo_list(g, data, today, dday_end, R, y0, u, todo_scale)
 
     _n = datetime.datetime.now(KST)
     now_h = _n.hour + _n.minute / 60
@@ -302,5 +302,5 @@ if __name__ == "__main__":
     with open(os.path.join(base, f"data{sfx}.json"), encoding="utf-8") as f:
         data = json.load(f)
     today = datetime.datetime.now(KST).date()
-    draw(data, today, 1080, 2340, os.path.join(base, f"phone{sfx}.png"))
+    draw(data, today, 1080, 2340, os.path.join(base, f"phone{sfx}.png"), todo_scale=1.2)
     draw(data, today, 1200, 1920, os.path.join(base, f"tablet{sfx}.png"))
