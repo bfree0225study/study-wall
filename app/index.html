@@ -185,6 +185,7 @@ tr:last-child > * { border-bottom: 0; }
 .tt .ev { position: absolute; left: 1px; right: 1px; overflow: hidden; display: flex; align-items: center; justify-content: center; text-align: center; background: var(--bg); border: 1px solid var(--ink-2); line-height: 1.2; }
 .tt .ev.학원 { background: var(--accent-soft); border-color: var(--accent); }
 .tt .ev.운동 { background: var(--red-soft); border-color: var(--pen-red); }
+.tt .ev.공부 { background: var(--blue-wash); border-color: var(--pen-blue); color: var(--ink-2); }
 .tt .ev.학교 { color: var(--ink-2); border-color: var(--line); }
 
 .vbars { display: flex; align-items: flex-end; height: 120px; border-bottom: 1px solid var(--ink); }
@@ -207,9 +208,9 @@ tr:last-child > * { border-bottom: 0; }
 .line svg { display: block; width: 100%; }
 .line text { fill: var(--ink); font-family: var(--font-num); font-size: 12px; }
 .line text.x { fill: var(--ink-2); }
-.plist{list-style:none;margin:8px 0 0;padding:0;font-size:13px}.plist li{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid var(--line)}.plist button{background:none;border:1px solid var(--line);cursor:pointer;padding:0 8px}.padd span{min-width:7em;color:var(--ink-2)}
+.padd span{min-width:7em;color:var(--ink-2)}
 .tt { --row: 12px; }
-.tt .hours, .tt .col { height: calc(28 * var(--row)); }
+.tt .hours, .tt .col { height: calc(30 * var(--row)); }
 .tt .col { background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(2 * var(--row) - 1px), var(--line) calc(2 * var(--row) - 1px), var(--line) calc(2 * var(--row))); }
 .tt .ev { left: 0; right: 0; box-sizing: border-box; }
 </style>
@@ -257,13 +258,6 @@ tr:last-child > * { border-bottom: 0; }
   </section>
   <section class="hero" id="hero"></section>
   <main class="sheet" id="sheet"></main>
-  <section class="block" id="plan-edit">
-    <h2>일정 넣기·지우기</h2>
-    <form class="padd" id="ex-add"><span>시험</span><input id="ex-s" placeholder="과목" maxlength="10"><input id="ex-d" type="date"><button class="act" type="submit">추가</button></form>
-    <form class="padd" id="tt-add"><span>고정 일정</span><select id="tt-w"><option>월</option><option>화</option><option>수</option><option>목</option><option>금</option><option>토</option><option>일</option></select><input id="tt-s" type="time" value="18:00"><input id="tt-e" type="time" value="20:00"><input id="tt-t" placeholder="이름" maxlength="8"><select id="tt-k"><option>학원</option><option>자습</option><option>운동</option><option>기타</option></select><button class="act" type="submit">추가</button></form>
-    <form class="padd" id="tk-add"><span>시간 정한 할 일</span><input id="tk-d" type="date"><input id="tk-s" type="time"><input id="tk-e" type="time"><input id="tk-t" placeholder="할 일" maxlength="20"><button class="act" type="submit">추가</button></form>
-    <ul class="plist" id="plist"></ul>
-  </section>
 </div>
 
 <script>
@@ -571,7 +565,9 @@ function statHTML() {
   const monthTbl = `<section class="block"><h2>월간 추세</h2><table><thead><tr><th>월</th><th class="r">총 시간</th><th class="r">하루 평균</th><th class="r">기록일</th></tr></thead><tbody>${Object.entries(months).map(([k, v]) => { const s = v.reduce((a, b) => a + b, 0); return `<tr><td>${Number(k.slice(5))}월</td><td class="num r">${h1(s)}</td><td class="num r">${h1(s / v.length)}</td><td class="num r">${v.length}</td></tr>`; }).join('')}</tbody></table></section>`;
 
   // 학원·운동 고정 시간표
-  const tn = s => { const [h, m] = s.split(':').map(Number); return h + m / 60; }, from = 9, to = 23, span = to - from, tt = planItems('timetable');
+  const tn = s => { const [h, m] = s.split(':').map(Number); return h + m / 60; }, from = 9, to = 24, span = to - from, tt = planItems('timetable').slice();
+  // 매일 운동이 끝난 뒤부터 밤 12시까지는 공부 시간으로 채운다
+  WD.forEach(w => { const ex = tt.filter(x => x.day === w && x.kind === '운동').map(x => tn(x.end)); if (ex.length) { const e = Math.max(...ex); if (e < 24) tt.push({day: w, start: String(Math.floor(e)).padStart(2, '0') + ':' + String(Math.round((e % 1) * 60)).padStart(2, '0'), end: '24:00', title: '공부', kind: '공부'}); } });
   let g = '<div></div>' + WD.map((w, i) => `<div class="head${i === 5 ? ' sat' : i === 6 ? ' sun' : ''}">${w}</div>`).join('') + '<div class="hours">';
   for (let h = from; h < to; h += 2) g += `<span style="top:${(h - from) / span * 100}%">${h}</span>`;
   g += '</div>' + WD.map(w => '<div class="col">' + tt.filter(x => x.day === w && x.kind !== '학교').map(x =>
@@ -584,35 +580,13 @@ function statHTML() {
 }
 
 
-/* ---------- 시험·고정 일정·시간 정한 할 일 넣기 ---------- */
-function drawPlan() {
-  const r = [];
-  planItems('exams').forEach((x, i) => r.push(['exams', i, `시험 ${md(x.date)} ${esc(x.subject)}`]));
-  planItems('timetable').forEach((x, i) => r.push(['timetable', i, `매주 ${x.day} ${x.start}~${x.end} ${esc(x.title)} (${esc(x.kind)})`]));
-  planItems('tasks').forEach((x, i) => { if (x.start) r.push(['tasks', i, `${md(x.date)} ${x.start}~${x.end} ${esc(x.title)}`]); });
-  $('plist').innerHTML = r.map(([k, i, t]) => `<li><span>${t}</span><button type="button" data-del="${k}" data-i="${i}">지우기</button></li>`).join('');
-}
-async function savePlan(k, items) {
-  store.plan[k] = Object.assign({}, store.plan[k] || {}, {items}); drawPlan(); drawTodos(); if (loaded) drawGrid();
-  try { await call('save', [{key: 'plan/' + k, doc: store.plan[k]}]); pSay('저장됨'); }
-  catch (e) { pSay('저장하지 못했습니다. 새로고침한 뒤 다시 해 주세요.'); }
-}
-$('plist').addEventListener('click', e => { const b = e.target.closest('[data-del]'); if (!b || !loaded) return;
-  const items = [...planItems(b.dataset.del)]; items.splice(Number(b.dataset.i), 1); savePlan(b.dataset.del, items); });
-$('ex-add').addEventListener('submit', e => { e.preventDefault(); const s = $('ex-s').value.trim(), d = $('ex-d').value; if (!s || !d || !loaded) return;
-  savePlan('exams', [...planItems('exams'), {subject: s, date: d}].sort((a, b) => a.date < b.date ? -1 : 1)); $('ex-s').value = ''; });
-$('tt-add').addEventListener('submit', e => { e.preventDefault(); const t = $('tt-t').value.trim(), s = $('tt-s').value, en = $('tt-e').value; if (!t || !s || !en || s >= en || !loaded) return;
-  savePlan('timetable', [...planItems('timetable'), {day: $('tt-w').value, start: s, end: en, title: t, kind: $('tt-k').value}]); $('tt-t').value = ''; });
-$('tk-add').addEventListener('submit', e => { e.preventDefault(); const t = $('tk-t').value.trim(), d = $('tk-d').value, s = $('tk-s').value, en = $('tk-e').value; if (!t || !d || !s || !en || s >= en || !loaded) return;
-  savePlan('tasks', [...planItems('tasks'), {date: d, start: s, end: en, subject: '', title: t}]); $('tk-t').value = ''; });
-
 /* ---------- 불러오기 ---------- */
 async function refresh() {
   const got = await call('load');
   store = {days: Object.fromEntries((got.days || []).filter(d => d && d.date).map(d => [d.date, d])), plan: got.plan || {}};
   if (!mode) setMode(firstMode());
   loaded = true;
-  drawTodos(); drawPlan();
+  drawTodos();
   if (pDrag) return;
   drawPens(); drawGrid();
 }
