@@ -160,6 +160,8 @@ def draw(data, today, W, H, out):
     y, dday_end = header(g, data, today, W, L, R, y0, u)
     todo_list(g, data, today, dday_end, R, y0, u)
 
+    _n = datetime.datetime.now(KST)
+    now_h = _n.hour + _n.minute / 60
     monday = today - datetime.timedelta(days=today.weekday())
     dates = [monday + datetime.timedelta(days=i) for i in range(7)]
     f_head, f_date = font(BOLD, int(32 * u)), font(SANS, int(23 * u))
@@ -256,6 +258,9 @@ def draw(data, today, W, H, out):
             done = rec.get("blocks", [])
             for p in items:
                 a, b = hours(p["s"]), hours(p["e"])
+                # 오늘은 이미 끝난 시간의 일정을 지운다.
+                if d == today and b <= now_h:
+                    continue
                 # 이미 칠한 시간과 겹치면 기록을 우선한다.
                 if any(a < hours(e) and hours(s) < b for s, e, _, _ in done):
                     continue

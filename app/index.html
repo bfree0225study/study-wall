@@ -397,6 +397,9 @@ function drawCol(date) {
     const sa = studyAfter(dow);
     if (sa) for (let i = timeSlot(sa); i < SLOTS; i++) if (!a[i]) a[i] = 'plan-study|공부';
   }
+  // 해야 할 일(연한 칸)은 그 시간이 지나면 지운다. 지난 날은 전부, 오늘은 지난 칸만.
+  const nowIdx = date < ymd(realToday()) ? SLOTS : date === ymd(realToday()) ? Math.floor((new Date().getHours() * 60 + new Date().getMinutes()) / (1440 / SLOTS)) : 0;
+  for (let i = 0; i < nowIdx; i++) if (a[i] && a[i].startsWith('plan-')) a[i] = '';
   // 글자는 같은 항목이 이어진 구간의 가운데에 적는다.
   const lab = {};
   for (let s = 0; s < SLOTS;) { let e = s; while (e < SLOTS && a[e] === a[s]) e++; if (a[s] && !a[s].startsWith('sleep|')) lab[Math.floor((s + e - 1) / 2)] = (e - s) % 2 === 0; s = e; }
@@ -505,6 +508,7 @@ function pBack() {
   clearTimeout(pTimer); pTimer = setTimeout(pSave, 600); drawPens();
 }
 const painting = () => pen !== undefined;
+setInterval(() => { try { pDates().forEach(d => { if (pCells[d]) drawCol(d); }); } catch (e) {} }, 300000);  // 5분마다 지난 계획 칸 정리
 function pAbort() {
   if (!pDrag) { hold = null; return; }
   const u = pUndo.pop(), date = pDrag.date;
