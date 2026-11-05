@@ -216,7 +216,7 @@ tr:last-child > * { border-bottom: 0; }
 .line text.x { fill: var(--ink-2); }
 .padd span{min-width:7em;color:var(--ink-2)}
 .tt { --row: 12px; }
-.tt .hours, .tt .col { height: calc(30 * var(--row)); }
+.tt .hours, .tt .col { height: calc(32 * var(--row)); }
 .tt .col { background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(2 * var(--row) - 1px), var(--line) calc(2 * var(--row) - 1px), var(--line) calc(2 * var(--row))); }
 .tt .ev { left: 0; right: 0; box-sizing: border-box; }
 </style>
@@ -614,7 +614,7 @@ function statHTML() {
   const monthTbl = `<section class="block"><h2>월간 추세</h2><table><thead><tr><th>월</th><th class="r">총 시간</th><th class="r">하루 평균</th><th class="r">기록일</th></tr></thead><tbody>${Object.entries(months).map(([k, v]) => { const s = v.reduce((a, b) => a + b, 0); return `<tr><td>${Number(k.slice(5))}월</td><td class="num r">${h1(s)}</td><td class="num r">${h1(s / v.length)}</td><td class="num r">${v.length}</td></tr>`; }).join('')}</tbody></table></section>`;
 
   // 학원·운동 고정 시간표
-  const tn = s => { const [h, m] = s.split(':').map(Number); return h + m / 60; }, from = 9, to = 24, span = to - from, tt = planItems('timetable').slice();
+  const tn = s => { const [h, m] = s.split(':').map(Number); return h + m / 60; }, from = 8, to = 24, span = to - from, tt = planItems('timetable').slice();
   // 평일에는 운동이 끝난 뒤부터 밤 12시까지 공부
   WD.forEach(w => { const e = studyAfter(w); if (e) tt.push({day: w, start: e, end: '24:00', title: '공부', kind: '공부'}); });
   let g = '<div></div>' + WD.map((w, i) => `<div class="head${i === 5 ? ' sat' : i === 6 ? ' sun' : ''}">${w}</div>`).join('') + '<div class="hours">';
