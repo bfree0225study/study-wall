@@ -74,6 +74,11 @@ def main(folder):
     weekly = [{"dow": t["day"], "s": t["start"], "e": t["end"], "t": SHORT.get(t["title"], t["title"]),
                "k": "study" if t.get("kind") in STUDY else "other"}
               for t in table if t.get("kind") not in ("학교", "운동")]
+    # 매일 운동이 끝난 뒤부터 밤 12시까지는 공부 시간 (기록장 주간 시간표와 같음)
+    for w in ["월", "화", "수", "목", "금", "토", "일"]:
+        ends = [t["end"] for t in table if t.get("kind") == "운동" and t["day"] == w]
+        if ends and max(ends) < "24:00":
+            weekly.append({"dow": w, "s": max(ends), "e": "24:00", "t": "공부", "k": "study"})
     plan, notes, todos = [], {}, []
 
     # 운동 시간에는 3분할 순서대로 다음에 할 부위를 적는다.
