@@ -125,7 +125,19 @@ def todo_list(g, data, today, x0, R, y, u, scale=1.0):
     fd, gap, box = font(SANS, int(27 * u * k)), 38 * u * k, 22 * u * k
     last = y + 102 * u                 # 맨 아래 줄의 글자 밑선 (3개일 때와 같은 자리)
     left = x0 + 40 * u
-    right = R - 60 * u
+    right = R - 24 * u   # 오른쪽 끝에 닿지 않을 만큼만 남긴다
+    # 모든 줄이 같은 글자 크기가 되게, 가장 긴 줄이 들어가는 크기로 통일한다.
+    def start_x(t):
+        x = left + box + 14 * u * k
+        if t["d"]:
+            d = datetime.date.fromisoformat(t["d"])
+            x += text_w(g, f"{d.month}/{d.day}", fd) + 14 * u * k
+        return x
+    size = 32 * k
+    for t in items:
+        sx = start_x(t)
+        while size > 14 and sx + text_w(g, t["t"], font(SANS, int(size * u))) > right:
+            size -= 1
     for i, t in enumerate(items):
         b = last - gap * (n - 1 - i)
         g.rectangle((left, b - box, left + box, b), outline=INK_SOFT, width=max(2, int(2 * u)))
@@ -134,11 +146,7 @@ def todo_list(g, data, today, x0, R, y, u, scale=1.0):
             d = datetime.date.fromisoformat(t["d"])
             ds = f"{d.month}/{d.day}"
             g.text((x, b), ds, font=fd, fill=INK_SOFT, anchor="ls")
-            x += text_w(g, ds, fd) + 14 * u * k
-        size = 32 * k
-        while size > 14 and x + text_w(g, t["t"], font(SANS, int(size * u))) > right:
-            size -= 1
-        g.text((x, b), t["t"], font=font(SANS, int(size * u)), fill=INK, anchor="ls")
+        g.text((start_x(t), b), t["t"], font=font(SANS, int(size * u)), fill=INK, anchor="ls")
     if more > 0:
         g.text((R, last + gap * 0.9), f"+{more}", font=fd, fill=INK_SOFT, anchor="rs")
 
