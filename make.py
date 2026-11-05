@@ -249,8 +249,8 @@ def draw(data, today, W, H, out):
         totals.append(spent if d <= today else None)
         week_study += spent if d <= today else 0
 
-        # 이번 주 모든 날(지난 날 포함)의 계획을 연하게 그린다. 칠한 기록과 겹치면 기록을 우선한다.
-        if True:
+        # 지나지 않은 날(오늘 포함)의 남은 일정만 흐리게
+        if d >= today:
             items = [p for p in data.get("weekly", []) if p["dow"] == WD[i]]
             items += [p for p in data.get("plan", []) if p["d"] == d.isoformat()]
             done = rec.get("blocks", [])

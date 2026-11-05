@@ -385,9 +385,9 @@ function studyAfter(w) {
 function drawCol(date) {
   const col = document.querySelector(`.pcol[data-d="${date}"]`); if (!col) return;
   const a = [...pCells[date]];
-  {
+  if (date >= ymd(realToday())) {
     const dow = WD[wdIdx(new Date(date + 'T00:00'))];
-    // 주간 시간표의 수업·학원·운동을 그 주 모든 날에 할 일(연한 칸)로 보여 준다. 이미 칠한 칸은 그대로 둔다. (저장하지 않음)
+    // 주간 시간표의 학원·운동을 할 일(연한 칸)로 보여 준다. 이미 칠한 칸은 그대로 둔다. (저장하지 않음)
     planItems('timetable').filter(x => x.day === dow).forEach(x => {
       const v = (x.kind === '운동' ? 'plan-other|' : x.kind === '학교' ? 'plan-school|' : 'plan-study|') + x.title;
       for (let i = timeSlot(x.start); i < timeSlot(x.end) && i < SLOTS; i++) if (!a[i]) a[i] = v;
