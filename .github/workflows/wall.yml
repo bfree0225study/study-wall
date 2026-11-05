@@ -22,9 +22,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # 시험 기간: _new 를 붙여 phone_new.png / tablet_new.png 로 따로 만든다.
-      # 기존 시스템으로 전환할 때 이 값을 빈 문자열("")로 바꾼다.
-      WALL_SUFFIX: "_new"
+      # 전환 완료(2026-11-05): 빈 값이면 phone.png / tablet.png / data.json 으로 만든다.
+      # 따로 시험할 때만 "_new" 를 넣는다.
+      WALL_SUFFIX: ""
     steps:
       - uses: actions/checkout@v4
 

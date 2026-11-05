@@ -11,7 +11,7 @@
 ## 고칠 곳
 - 잠금화면 디자인: `make.py` 맨 위 설정 블록(색, 위아래 빈 공간).
 - 기록장 디자인: `app/index.html`의 `:root` 색 변수, 항목 목록은 `BASE_LABELS`.
-- 시험 기간(새 시스템 시험): `wall.yml`의 `WALL_SUFFIX: "_new"`. 전환할 때 `""`로 바꾼다.
+- 파일 이름: `wall.yml`의 `WALL_SUFFIX`. 지금은 `""`(전환 완료)라서 `phone.png`, `tablet.png`로 만든다. 따로 시험할 때만 `"_new"`.
 
 ## 비밀 값
 - Apps Script 스크립트 속성: `TOKEN`(setup이 만듦), `GH_TOKEN`(GitHub 토큰, 이 저장소 Actions 쓰기만), `SHEET_ID`.
