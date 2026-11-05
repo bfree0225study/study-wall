@@ -73,7 +73,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .padd { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 4px; font-size: 13px; }
 .padd input, .padd select { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 0; padding: 4px; min-width: 0; }
 .padd input { width: 6em; }
-.pg { display: grid; grid-template-columns: 26px repeat(7, minmax(0, 1fr)); --slot: 15px; }
+.pg { display: grid; grid-template-columns: 26px repeat(7, minmax(0, 1fr)) 26px; --slot: 15px; }
 .pg .phd { text-align: center; font-size: 12.5px; line-height: 1.25; padding-bottom: 3px; border-bottom: 1px solid var(--ink); }
 .pg .phd small { display: block; color: var(--ink-2); font-size: 11px; font-family: var(--font-num); }
 
@@ -90,6 +90,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .frac i:first-child { width: 1.8em; margin-inline: auto; border-bottom: 1px solid currentColor; }
 .pg .ph { position: relative; height: calc(48 * var(--slot)); font-size: 10.5px; color: var(--ink-2); font-family: var(--font-num); }
 .pg .ph span { position: absolute; left: 0; transform: translateY(-50%); }
+.pg .ph.r span { left: auto; right: 0; }  /* 오른쪽 시각 표기 (2시간 단위) */
+.pg .pcol.last { border-right: 1px solid var(--line); }
 .pg .pcol { border-left: 1px solid var(--line); user-select: none; -webkit-user-select: none; cursor: pointer; }
 .c.sep { box-shadow: inset 0 1px 0 var(--ink-2); }
 .c.half { line-height: calc(var(--slot) * 2 - 1px); }
@@ -436,11 +438,12 @@ function leftOf(d) {
 function drawGrid() {
   const ds = pDates(), t = ymd(realToday());
   $('p-title').textContent = pWeek === 0 ? '' : md(ds[0]) + '~' + md(ds[6]);
-  let html = '<div></div>' + ds.map((d, i) => `<div class="phd${i === 5 ? ' sat' : i === 6 ? ' sun' : ''}${d === t ? ' now' : ''}">${WD[i]} <span class="pd">${md(d)}</span><small class="left">${leftOf(d)}</small></div>`).join('');
+  let html = '<div></div>' + ds.map((d, i) => `<div class="phd${i === 5 ? ' sat' : i === 6 ? ' sun' : ''}${d === t ? ' now' : ''}">${WD[i]} <span class="pd">${md(d)}</span><small class="left">${leftOf(d)}</small></div>`).join('') + '<div></div>';
   // 시각: 매 시간 (12 1 2 ... 11 12 1 ... 12). 낮 12시에만 진한 선.
   html += '<div class="ph">' + Array.from({length: 25}, (_, h) => `<span style="top:${h / 24 * 100}%">${h % 12 || 12}</span>`).join('') + '</div>';
-  html += ds.map(d => `<div class="pcol" data-d="${d}">${'<div class="c"></div>'.repeat(SLOTS)}</div>`).join('');
-  html += '<div></div>' + ds.map(d => `<div class="psum" data-d="${d}"></div>`).join('');
+  html += ds.map((d, i) => `<div class="pcol${i === 6 ? ' last' : ''}" data-d="${d}">${'<div class="c"></div>'.repeat(SLOTS)}</div>`).join('');
+  html += '<div class="ph r">' + Array.from({length: 13}, (_, k) => `<span style="top:${k * 2 / 24 * 100}%">${(k * 2) % 12 || 12}</span>`).join('') + '</div>';
+  html += '<div></div>' + ds.map(d => `<div class="psum" data-d="${d}"></div>`).join('') + '<div></div>';
   $('pg').innerHTML = html;
   ds.forEach(d => { if (!pDirty.has(d)) pCells[d] = cellsOf(d); drawCol(d); });
 }
