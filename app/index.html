@@ -372,9 +372,17 @@ async function pSave() {
   }
 }
 
+// 평일(월~금)에는 그날 마지막 운동이 끝난 뒤부터 밤 12시까지를 '공부' 할 일 칸으로 보여 준다 (저장하지 않음)
+function studyAfter(w) {
+  if (WD.indexOf(w) > 4) return null;
+  const ends = planItems('timetable').filter(x => x.day === w && x.kind === '운동').map(x => x.end).sort();
+  return ends.length && ends[ends.length - 1] < '24:00' ? ends[ends.length - 1] : null;
+}
 function drawCol(date) {
   const col = document.querySelector(`.pcol[data-d="${date}"]`); if (!col) return;
-  const a = pCells[date];
+  const a = [...pCells[date]];
+  const sa = date >= ymd(realToday()) ? studyAfter(WD[wdIdx(new Date(date + 'T00:00'))]) : null;
+  if (sa) for (let i = timeSlot(sa); i < SLOTS; i++) if (!a[i]) a[i] = 'plan-study|공부';
   // 글자는 같은 항목이 이어진 구간의 가운데에 적는다.
   const lab = {};
   for (let s = 0; s < SLOTS;) { let e = s; while (e < SLOTS && a[e] === a[s]) e++; if (a[s] && !a[s].startsWith('sleep|')) lab[Math.floor((s + e - 1) / 2)] = (e - s) % 2 === 0; s = e; }
@@ -383,7 +391,7 @@ function drawCol(date) {
     el.className = 'c' + (k ? ' ' + k : '') + (k && i > 0 && a[i - 1] && a[i - 1] !== a[i] ? ' sep' : '') + (lab[i] ? ' half' : '');
     el.textContent = i in lab ? t : '';
   });
-  const h = a.filter(v => v.startsWith('study|')).length / 2;
+  const h = pCells[date].filter(v => v.startsWith('study|')).length / 2;
   const sum = document.querySelector(`.psum[data-d="${date}"]`); if (sum) sum.textContent = h ? h1(h) : '·';
   drawSum();
 }
@@ -566,8 +574,8 @@ function statHTML() {
 
   // 학원·운동 고정 시간표
   const tn = s => { const [h, m] = s.split(':').map(Number); return h + m / 60; }, from = 9, to = 24, span = to - from, tt = planItems('timetable').slice();
-  // 매일 운동이 끝난 뒤부터 밤 12시까지는 공부 시간으로 채운다
-  WD.forEach(w => { const ex = tt.filter(x => x.day === w && x.kind === '운동').map(x => tn(x.end)); if (ex.length) { const e = Math.max(...ex); if (e < 24) tt.push({day: w, start: String(Math.floor(e)).padStart(2, '0') + ':' + String(Math.round((e % 1) * 60)).padStart(2, '0'), end: '24:00', title: '공부', kind: '공부'}); } });
+  // 평일에는 운동이 끝난 뒤부터 밤 12시까지 공부
+  WD.forEach(w => { const e = studyAfter(w); if (e) tt.push({day: w, start: e, end: '24:00', title: '공부', kind: '공부'}); });
   let g = '<div></div>' + WD.map((w, i) => `<div class="head${i === 5 ? ' sat' : i === 6 ? ' sun' : ''}">${w}</div>`).join('') + '<div class="hours">';
   for (let h = from; h < to; h += 2) g += `<span style="top:${(h - from) / span * 100}%">${h}</span>`;
   g += '</div>' + WD.map(w => '<div class="col">' + tt.filter(x => x.day === w && x.kind !== '학교').map(x =>
