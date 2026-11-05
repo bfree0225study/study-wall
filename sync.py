@@ -90,12 +90,14 @@ def main(folder):
     wd = ["월", "화", "수", "목", "금", "토", "일"]
     for i in range(7):
         d = monday + datetime.timedelta(days=i)
-        if d < today or (d == today and workouts(every.get(d.isoformat(), {}))):
-            continue
+        past = d < today
+        if d <= today and workouts(every.get(d.isoformat(), {})):
+            continue   # 이미 한 운동은 기록으로 보이므로 계획을 그리지 않는다
         for t in sorted((t for t in table if t.get("kind") == "운동" and t["day"] == wd[i]), key=lambda t: t["start"]):
+            # 지난 날의 못 한 운동은 부위를 정하지 않고 '운동'으로만 적는다 (3분할 순서도 건드리지 않는다)
             plan.append({"d": d.isoformat(), "s": t["start"], "e": t["end"], "k": "other",
-                         "t": SPLIT[nxt] if nxt is not None else "운동"})
-            if nxt is not None:
+                         "t": "운동" if past or nxt is None else SPLIT[nxt]})
+            if not past and nxt is not None:
                 nxt = (nxt + 1) % 3
     for t in items(folder, "tasks"):
         if t.get("start") and t.get("end"):
