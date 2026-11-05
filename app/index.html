@@ -597,9 +597,9 @@ function statHTML() {
   allDates().forEach(d => Object.entries(dayStat(d).subj).forEach(([k, v]) => total[k] = (total[k] || 0) + v));
   const names = [...new Set([...labels().filter(l => l.type === 'study').map(l => l.t), ...Object.keys(total)])];
   const rows = names.map(s => ({s, w: week[s] || 0, a: total[s] || 0})).sort((a, b) => b.w - a.w || b.a - a.a);
-  const mx = Math.max(1, ...rows.map(r => r.w));
-  const subjectTbl = (title, withTotal) => `<section class="block"><h2>${title}</h2><table><thead><tr><th>과목</th><th>시간 막대</th><th class="r">시간</th><th class="r">${withTotal ? '누적' : '비중'}</th></tr></thead><tbody>${rows.map(r =>
-    `<tr><td>${esc(r.s)}</td><td class="barcell"><span class="track"><span class="fill" style="width:${r.w / mx * 100}%"></span></span></td><td class="num r">${h1(r.w)}</td><td class="num r">${withTotal ? h1(r.a) : (weekH ? Math.round(r.w / weekH * 100) : 0) + '%'}</td></tr>`).join('')}</tbody></table></section>`;
+  const allRows = names.map(s => ({s, w: total[s] || 0, a: total[s] || 0})).sort((a, b) => b.w - a.w), allH = allRows.reduce((n, r) => n + r.w, 0);
+  const subjectTbl = (title, withTotal, rs = rows, denom = weekH) => { const mx = Math.max(1, ...rs.map(r => r.w)); return `<section class="block"><h2>${title}</h2><table><thead><tr><th>과목</th><th>시간 막대</th><th class="r">시간</th><th class="r">${withTotal ? '누적' : '비중'}</th></tr></thead><tbody>${rs.map(r =>
+    `<tr><td>${esc(r.s)}</td><td class="barcell"><span class="track"><span class="fill" style="width:${r.w / mx * 100}%"></span></span></td><td class="num r">${h1(r.w)}</td><td class="num r">${withTotal ? h1(r.a) : (denom ? Math.round(r.w / denom * 100) : 0) + '%'}</td></tr>`).join('')}</tbody></table></section>`; };
 
   // 생활 기록 표
   const row = (k, cls, f) => `<tr class="${cls}"><td>${k}</td>${ds.map((d, i) => d > t ? '<td class="num">·</td>' : `<td class="num${f(W[i]) ? ' met' : ''}">${f(W[i]) ? h1(f(W[i])) : '–'}</td>`).join('')}</tr>`;
@@ -651,7 +651,7 @@ function statHTML() {
 
   $('sheet').innerHTML = mode === 'general'
     ? cmp + subjectTbl('과목별 공부 시간', true) + weekday + trend + monthTbl + life + ttb
-    : cmp + subjectTbl('과목별 공부 시간 배분 · ' + (pWeek ? '선택한 주' : '이번 주'), false) + life + ttb;
+    : cmp + subjectTbl('과목별 공부 시간 배분 · 전체 기록', false, allRows, allH) + life + ttb;
 }
 
 
