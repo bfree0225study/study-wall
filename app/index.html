@@ -94,7 +94,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .c.sep { box-shadow: inset 0 1px 0 var(--ink-2); }
 .c.half { line-height: calc(var(--slot) * 2 - 1px); }
 .pg .pcol { -webkit-touch-callout: none; }
-.pg.painting .pcol { touch-action: none; }
+.pg.painting .pcol { touch-action: pinch-zoom; }  /* 한 손가락은 칠하기, 두 손가락은 확대 */
 .pg .pcol:last-of-type { border-right: 1px solid var(--line); }
 .c { box-sizing: border-box; height: var(--slot); line-height: calc(var(--slot) - 1px); font-size: 11px; text-align: center; white-space: nowrap; overflow: visible; border-bottom: 1px solid transparent; }
 .c:nth-child(2n) { border-bottom-color: var(--line); }
@@ -505,7 +505,14 @@ function pBack() {
   clearTimeout(pTimer); pTimer = setTimeout(pSave, 600); drawPens();
 }
 const painting = () => pen !== undefined;
+function pAbort() {
+  if (!pDrag) { hold = null; return; }
+  const u = pUndo.pop(), date = pDrag.date;
+  if (u) { pCells[date] = u.cells; drawCol(date); }
+  pDrag = null; hold = null;
+}
 $('pg').addEventListener('pointerdown', e => {
+  if (hold && e.pointerId !== hold.id) { pAbort(); return; }  // 두 번째 손가락: 칠하던 것을 취소하고 확대에 양보
   const col = e.target.closest('.pcol'); if (!col || !painting() || hold || !loaded) return;
   e.preventDefault();
   const date = col.dataset.d, i = slotAt(col, e.clientY), v = pen ? (pLater ? 'plan-' : '') + pen.type + '|' + pen.t : '';
@@ -519,7 +526,7 @@ $('pg').addEventListener('pointermove', e => { if (hold && e.pointerId === hold.
 $('pg').addEventListener('contextmenu', e => { if (e.target.closest('.pcol')) e.preventDefault(); });
 const pUp = e => { if (!hold || e.pointerId !== hold.id) return; hold = null; pCommit(); };
 $('pg').addEventListener('pointerup', pUp);
-$('pg').addEventListener('pointercancel', pUp);
+$('pg').addEventListener('pointercancel', e => { if (hold && e.pointerId === hold.id) pAbort(); });
 $('pens').addEventListener('click', e => {
   if (e.target.closest('[data-undo]')) { pBack(); return; }
   if (e.target.closest('[data-later]')) { pLater = !pLater; drawPens(); return; }
