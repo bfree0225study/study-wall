@@ -111,29 +111,35 @@ def footer(g, stats, L, R, y, u):
 
 
 def todo_list(g, data, today, x0, R, y, u):
-    """머리말 줄 오른쪽 빈 자리(D-day 옆)에 해야 할 일을 적는다. 날짜 있는 것은 지난 뒤 사라진다."""
+    """머리말 줄 오른쪽 빈 자리(D-day 옆)에 해야 할 일을 모두 적는다.
+    맨 아래 줄 자리는 고정하고, 많아지면 위쪽 빈 공간으로 늘린다. 많을수록 글자와 간격이 줄어든다.
+    날짜 있는 것은 지난 뒤 사라진다."""
     items = [t for t in data.get("todos", []) if not t["d"] or t["d"] >= today.isoformat()]
     if not items:
         return
-    more, items = len(items) - 3, items[:3]
-    fd, gap, box = font(SANS, int(27 * u)), 38 * u, 22 * u
-    first = y + 26 * u
+    MAXN = 14
+    more, items = len(items) - MAXN, items[:MAXN]
+    n = len(items)
+    k = 1.0 if n <= 4 else max(0.62, 1 - 0.07 * (n - 4))   # 많을수록 작게
+    fd, gap, box = font(SANS, int(27 * u * k)), 38 * u * k, 22 * u * k
+    last = y + 102 * u                 # 맨 아래 줄의 글자 밑선 (3개일 때와 같은 자리)
     left = x0 + 40 * u
+    right = R - (60 if n <= 3 else 130) * u   # 많을 때는 오른쪽 위 '갱신' 글자를 피한다
     for i, t in enumerate(items):
-        b = first + gap * i
+        b = last - gap * (n - 1 - i)
         g.rectangle((left, b - box, left + box, b), outline=INK_SOFT, width=max(2, int(2 * u)))
-        x = left + box + 14 * u
+        x = left + box + 14 * u * k
         if t["d"]:
             d = datetime.date.fromisoformat(t["d"])
             ds = f"{d.month}/{d.day}"
             g.text((x, b), ds, font=fd, fill=INK_SOFT, anchor="ls")
-            x += text_w(g, ds, fd) + 14 * u
-        size = 32
-        while size > 20 and x + text_w(g, t["t"], font(SANS, int(size * u))) > R - 60 * u:
-            size -= 2
+            x += text_w(g, ds, fd) + 14 * u * k
+        size = 32 * k
+        while size > 14 and x + text_w(g, t["t"], font(SANS, int(size * u))) > right:
+            size -= 1
         g.text((x, b), t["t"], font=font(SANS, int(size * u)), fill=INK, anchor="ls")
     if more > 0:
-        g.text((R, b), f"+{more}", font=fd, fill=INK_SOFT, anchor="rs")
+        g.text((R, last + gap * 0.9), f"+{more}", font=fd, fill=INK_SOFT, anchor="rs")
 
 
 def draw(data, today, W, H, out):
