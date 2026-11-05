@@ -22,6 +22,8 @@
   --blue-soft: #d0def6;   /* 칠한 공부 칸 (연하게) */
   --red-soft: #f9d6d0;    /* 칠한 공부 외 칸 */
   --sleep-soft: #a5a5a5;
+  --done-blue: #96b6ee;   /* 한 공부 칸 */
+  --done-red: #f0a094;    /* 한 공부 외 칸 */
   --blue-wash: #eef3fb;   /* 시간표 토요일 칸 */
   --red-wash: #fcefed;    /* 시간표 일요일 칸 */  /* 수면 칸 */
   --font-text: "Gowun Dodum", "Noto Sans KR", "Malgun Gothic", sans-serif;
@@ -29,10 +31,10 @@
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #26282a; --ink: #ebece9; --ink-2: #a7adaa; --line: #484c4e;
-  --accent: #6f93e0; --accent-soft: #34446b; --bar: #666d6e; --pen-blue: #6f93e0; --pen-red: #e27a6e; --hatch: #a7adaa; --blue-soft: #34446b; --red-soft: #5e3530; --sleep-soft: #3e4042; --blue-wash: #283247; --red-wash: #3b2a28; color-scheme: dark } }
+  --accent: #6f93e0; --accent-soft: #34446b; --bar: #666d6e; --pen-blue: #6f93e0; --pen-red: #e27a6e; --hatch: #a7adaa; --blue-soft: #34446b; --red-soft: #5e3530; --sleep-soft: #3e4042; --done-blue: #4a63a8; --done-red: #8a4a42; --blue-wash: #283247; --red-wash: #3b2a28; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #26282a; --ink: #ebece9; --ink-2: #a7adaa; --line: #484c4e;
-  --accent: #6f93e0; --accent-soft: #34446b; --bar: #666d6e; --pen-blue: #6f93e0; --pen-red: #e27a6e; --hatch: #a7adaa; --blue-soft: #34446b; --red-soft: #5e3530; --sleep-soft: #3e4042; --blue-wash: #283247; --red-wash: #3b2a28; color-scheme: dark }
+  --accent: #6f93e0; --accent-soft: #34446b; --bar: #666d6e; --pen-blue: #6f93e0; --pen-red: #e27a6e; --hatch: #a7adaa; --blue-soft: #34446b; --red-soft: #5e3530; --sleep-soft: #3e4042; --done-blue: #4a63a8; --done-red: #8a4a42; --blue-wash: #283247; --red-wash: #3b2a28; color-scheme: dark }
 
 body { background: var(--bg); color: var(--ink); font-family: var(--font-text); font-size: 14px; line-height: 1.45; }
 .page { max-width: 1180px; margin: 0 auto; padding-block: 12px 32px;
@@ -96,8 +98,8 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .c { box-sizing: border-box; height: var(--slot); line-height: calc(var(--slot) - 1px); font-size: 11px; text-align: center; white-space: nowrap; overflow: visible; border-bottom: 1px solid transparent; }
 .c:nth-child(2n) { border-bottom-color: var(--line); }
 .c:nth-child(24) { border-bottom-color: var(--ink-2); }
-.c.study { background: var(--blue-soft); color: var(--ink); }
-.c.other { background: var(--red-soft); color: var(--ink); }
+.c.study { background: var(--done-blue); color: var(--ink); }
+.c.other { background: var(--done-red); color: var(--ink); }
 .c.sleep { background: var(--sleep-soft); }
 .c.plan-study { background: var(--blue-wash); color: var(--ink-2); }
 .c.plan-other, .c.plan-sleep { background: var(--red-wash); color: var(--ink-2); }

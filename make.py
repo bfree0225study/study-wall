@@ -24,11 +24,13 @@ INK = (28, 28, 28)
 INK_SOFT = (105, 105, 105)
 BLUE = INK    # 글자색 (파랑 글자 쓰지 않음)
 RED = INK     # 글자색 (빨강 글자 쓰지 않음)
-BLUE_FILL = (208, 222, 246)    # 한 공부
-RED_FILL = (249, 214, 208)     # 한 공부 외
+HEAD_BLUE = (208, 222, 246)    # 토요일 머리칸
+HEAD_RED = (249, 214, 208)     # 일요일 머리칸
+BLUE_FILL = (150, 182, 238)    # 한 공부 (진하게)
+RED_FILL = (240, 160, 148)     # 한 공부 외 (진하게)
 SLEEP_FILL = (165, 165, 165)   # 수면
-BLUE_PLAN = (240, 245, 252)    # 해야 할 공부
-RED_PLAN = (253, 241, 239)     # 해야 할 운동·일정
+BLUE_PLAN = (244, 248, 254)    # 해야 할 공부
+RED_PLAN = (254, 245, 243)     # 해야 할 운동·일정
 TOP_EMPTY = 0.27      # 위쪽 시계 자리
 BOTTOM_EMPTY = 0.115  # 아래쪽 잠금화면 단축 아이콘 자리
 BACKDROP = None       # 바탕 무늬를 그리는 함수(선택)
@@ -162,7 +164,7 @@ def draw(data, today, W, H, out):
         tw = text_w(g, name, f_head) + text_w(g, md_, f_md)
         if i >= 5:  # 주말 머리칸에 연한 색
             g.rectangle((grid_l + col * i + 2 * u, y - 14 * u, grid_l + col * (i + 1) - 2 * u, y + 104 * u),
-                        fill=BLUE_FILL if i == 5 else RED_FILL)
+                        fill=HEAD_BLUE if i == 5 else HEAD_RED)
         g.text((cx - tw / 2, y - 6 * u), name, font=f_head, fill=color)
         g.text((cx - tw / 2 + text_w(g, name, f_head), y + 2 * u), md_, font=f_md, fill=INK_SOFT)
         # 날짜 대신 그날 기준 시험까지 남은 기간을 대분수(-5 5/7)로 적는다.
