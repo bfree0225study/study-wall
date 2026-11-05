@@ -31,6 +31,7 @@ RED_FILL = (240, 160, 148)     # 한 공부 외 (진하게)
 SLEEP_FILL = (165, 165, 165)   # 수면
 BLUE_PLAN = (244, 248, 254)    # 해야 할 공부
 RED_PLAN = (254, 245, 243)     # 해야 할 운동·일정
+SCHOOL_PLAN = (238, 238, 238)  # 학교 수업
 TOP_EMPTY = 0.27      # 위쪽 시계 자리
 BOTTOM_EMPTY = 0.115  # 아래쪽 잠금화면 단축 아이콘 자리
 BACKDROP = None       # 바탕 무늬를 그리는 함수(선택)
@@ -259,7 +260,7 @@ def draw(data, today, W, H, out):
                 if any(a < hours(e) and hours(s) < b for s, e, _, _ in done):
                     continue
                 box = (X(i) + pad, Y(a) + gap, X(i + 1) - pad, Y(b) - gap)
-                g.rectangle(box, fill=BLUE_PLAN if p.get("k") == "study" else RED_PLAN)
+                g.rectangle(box, fill=BLUE_PLAN if p.get("k") == "study" else SCHOOL_PLAN if p.get("k") == "school" else RED_PLAN)
                 box_text(g, box, p["t"], INK_SOFT, u)
 
     # 각 날짜 아래 하루 공부 합계

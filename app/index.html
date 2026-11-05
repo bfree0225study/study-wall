@@ -24,6 +24,7 @@
   --sleep-soft: #a5a5a5;
   --done-blue: #96b6ee;   /* 한 공부 칸 */
   --done-red: #f0a094;    /* 한 공부 외 칸 */
+  --school-wash: #ededed; /* 학교 수업 칸 */
   --blue-wash: #eef3fb;   /* 시간표 토요일 칸 */
   --red-wash: #fcefed;    /* 시간표 일요일 칸 */  /* 수면 칸 */
   --font-text: "Gowun Dodum", "Noto Sans KR", "Malgun Gothic", sans-serif;
@@ -31,10 +32,10 @@
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #26282a; --ink: #ebece9; --ink-2: #a7adaa; --line: #484c4e;
-  --accent: #6f93e0; --accent-soft: #34446b; --bar: #666d6e; --pen-blue: #6f93e0; --pen-red: #e27a6e; --hatch: #a7adaa; --blue-soft: #34446b; --red-soft: #5e3530; --sleep-soft: #3e4042; --done-blue: #4a63a8; --done-red: #8a4a42; --blue-wash: #283247; --red-wash: #3b2a28; color-scheme: dark } }
+  --accent: #6f93e0; --accent-soft: #34446b; --bar: #666d6e; --pen-blue: #6f93e0; --pen-red: #e27a6e; --hatch: #a7adaa; --blue-soft: #34446b; --red-soft: #5e3530; --sleep-soft: #3e4042; --done-blue: #4a63a8; --done-red: #8a4a42; --school-wash: #34373a; --blue-wash: #283247; --red-wash: #3b2a28; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #26282a; --ink: #ebece9; --ink-2: #a7adaa; --line: #484c4e;
-  --accent: #6f93e0; --accent-soft: #34446b; --bar: #666d6e; --pen-blue: #6f93e0; --pen-red: #e27a6e; --hatch: #a7adaa; --blue-soft: #34446b; --red-soft: #5e3530; --sleep-soft: #3e4042; --done-blue: #4a63a8; --done-red: #8a4a42; --blue-wash: #283247; --red-wash: #3b2a28; color-scheme: dark }
+  --accent: #6f93e0; --accent-soft: #34446b; --bar: #666d6e; --pen-blue: #6f93e0; --pen-red: #e27a6e; --hatch: #a7adaa; --blue-soft: #34446b; --red-soft: #5e3530; --sleep-soft: #3e4042; --done-blue: #4a63a8; --done-red: #8a4a42; --school-wash: #34373a; --blue-wash: #283247; --red-wash: #3b2a28; color-scheme: dark }
 
 body { background: var(--bg); color: var(--ink); font-family: var(--font-text); font-size: 14px; line-height: 1.45; }
 .page { max-width: 1180px; margin: 0 auto; padding-block: 12px 32px;
@@ -103,6 +104,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .c.sleep { background: var(--sleep-soft); }
 .c.plan-study { background: var(--blue-wash); color: var(--ink-2); }
 .c.plan-other, .c.plan-sleep { background: var(--red-wash); color: var(--ink-2); }
+.c.plan-school { background: var(--school-wash); color: var(--ink-2); }
 .pg .psum { text-align: center; font-family: var(--font-num); font-size: 13px; padding-top: 3px; border-top: 1px solid var(--ink); }
 .pfoot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; font-size: 12.5px; color: var(--ink-2); padding-top: 4px; }
 
@@ -188,7 +190,7 @@ tr:last-child > * { border-bottom: 0; }
 .tt .ev.학원 { background: var(--accent-soft); border-color: var(--accent); }
 .tt .ev.운동 { background: var(--red-soft); border-color: var(--pen-red); }
 .tt .ev.공부 { background: var(--blue-wash); border-color: var(--pen-blue); color: var(--ink-2); }
-.tt .ev.학교 { color: var(--ink-2); border-color: var(--line); }
+.tt .ev.학교 { background: var(--school-wash); color: var(--ink-2); border-color: var(--line); }
 
 .vbars { display: flex; align-items: flex-end; height: 120px; border-bottom: 1px solid var(--ink); }
 .vbars.days { gap: 2px; }
@@ -386,8 +388,8 @@ function drawCol(date) {
   if (date >= ymd(realToday())) {
     const dow = WD[wdIdx(new Date(date + 'T00:00'))];
     // 주간 시간표의 학원·운동을 할 일(연한 칸)로 보여 준다. 이미 칠한 칸은 그대로 둔다. (저장하지 않음)
-    planItems('timetable').filter(x => x.day === dow && x.kind !== '학교').forEach(x => {
-      const v = (x.kind === '운동' ? 'plan-other|' : 'plan-study|') + x.title;
+    planItems('timetable').filter(x => x.day === dow).forEach(x => {
+      const v = (x.kind === '운동' ? 'plan-other|' : x.kind === '학교' ? 'plan-school|' : 'plan-study|') + x.title;
       for (let i = timeSlot(x.start); i < timeSlot(x.end) && i < SLOTS; i++) if (!a[i]) a[i] = v;
     });
     const sa = studyAfter(dow);
@@ -588,7 +590,7 @@ function statHTML() {
   WD.forEach(w => { const e = studyAfter(w); if (e) tt.push({day: w, start: e, end: '24:00', title: '공부', kind: '공부'}); });
   let g = '<div></div>' + WD.map((w, i) => `<div class="head${i === 5 ? ' sat' : i === 6 ? ' sun' : ''}">${w}</div>`).join('') + '<div class="hours">';
   for (let h = from; h < to; h += 2) g += `<span style="top:${(h - from) / span * 100}%">${h}</span>`;
-  g += '</div>' + WD.map(w => '<div class="col">' + tt.filter(x => x.day === w && x.kind !== '학교').map(x =>
+  g += '</div>' + WD.map(w => '<div class="col">' + tt.filter(x => x.day === w).map(x =>
     `<div class="ev ${esc(x.kind || '')}" style="top:${(tn(x.start) - from) / span * 100}%;height:${(tn(x.end) - tn(x.start)) / span * 100}%" title="${esc(x.start)}~${esc(x.end)}">${esc(x.title)}</div>`).join('') + '</div>').join('');
   const ttb = tt.length ? `<section class="block wide"><h2>주간 시간표 (학원·운동)</h2><div class="tt">${g}</div></section>` : '';
 
