@@ -304,4 +304,5 @@ if __name__ == "__main__":
     today = datetime.datetime.now(KST).date()
     draw(data, today, 1080, 2340, os.path.join(base, f"phone{sfx}.png"), todo_scale=1.2,
          top_empty=0.28, bottom_empty=0.10)  # 폰만 위아래 여백을 줄여 세로로 늘림
-    draw(data, today, 1200, 1920, os.path.join(base, f"tablet{sfx}.png"))
+    draw(data, today, 1200, 1920, os.path.join(base, f"tablet{sfx}.png"),
+         top_empty=0.22, bottom_empty=0.09)  # 태블릿도 위아래 여백을 줄여 세로로 늘림
