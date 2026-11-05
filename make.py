@@ -218,6 +218,8 @@ def draw(data, today, W, H, out):
         if True:  # 모든 시각을 적는다 (12 1 2 ... 11 12 ... 12)
             # 시각 글자는 해당 줄 높이의 가운데에 맞춘다.
             g.text((grid_l - 10 * u, Y(h)), str(h % 12 or 12), font=f_axis, fill=INK_SOFT, anchor="rm")
+            if h % 2 == 0:  # 오른쪽에는 2시간 단위로만 적는다
+                g.text((R + 10 * u, Y(h)), str(h % 12 or 12), font=f_axis, fill=INK_SOFT, anchor="lm")
     for i in range(8):
         g.line((X(i), top, X(i), bottom), fill=RULE_STRONG, width=max(1, int(2 * u)))
 
