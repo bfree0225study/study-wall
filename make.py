@@ -224,8 +224,9 @@ def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_emp
         g.line((X(i), top, X(i), bottom), fill=RULE_STRONG, width=max(1, int(2 * u)))
 
     # 기록과 일정
-    pad = 4 * u
-    gap = 1.5 * u  # 이어진 칸 사이를 살짝 띄워 구분한다
+    pad = 1.2 * u   # 칸 칠은 세로줄 안쪽까지 꽉 채운다 (줄이 보일 만큼만 비움)
+    gap = 0         # 기록 칸은 위아래도 붙여서 칠한다. 이어진 칸은 아래 얇은 선으로 구분
+    gap_plan = 1 * u  # 연한 계획 칸은 서로 붙어 보이지 않게 살짝만 띄운다
     week_study, sleep_hours, sleep_days = 0, 0, 0
     totals = []
     for i, d in enumerate(dates):
@@ -266,7 +267,7 @@ def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_emp
                 # 이미 칠한 시간과 겹치면 기록을 우선한다.
                 if any(a < hours(e) and hours(s) < b for s, e, _, _ in done):
                     continue
-                box = (X(i) + pad, Y(a) + gap, X(i + 1) - pad, Y(b) - gap)
+                box = (X(i) + pad, Y(a) + gap_plan, X(i + 1) - pad, Y(b) - gap_plan)
                 g.rectangle(box, fill=BLUE_PLAN if p.get("k") == "study" else SCHOOL_PLAN if p.get("k") == "school" else RED_PLAN)
                 box_text(g, box, p["t"], INK_SOFT, u)
 
