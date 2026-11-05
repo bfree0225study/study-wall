@@ -42,6 +42,12 @@ jobs:
         run: |
           curl -sSfL --retry 3 --max-time 120 -G "$APPS_SCRIPT_URL" \
             --data-urlencode "export=1" --data-urlencode "k=$APPS_SCRIPT_TOKEN" -o export.json
+          # 기록(JSON)이 아니면 받은 내용 앞부분을 보여 주고 멈춘다(비밀 값 오타 확인용).
+          if [ "$(head -c 1 export.json)" != "{" ]; then
+            echo "기록이 아닌 응답을 받았습니다:"; head -c 200 export.json; echo
+            echo "URL 길이: ${#APPS_SCRIPT_URL}, TOKEN 길이: ${#APPS_SCRIPT_TOKEN} (정상: TOKEN 32)"
+            exit 1
+          fi
 
       - name: 풀고 이미지 만들기
         run: |
