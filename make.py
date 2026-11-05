@@ -125,7 +125,7 @@ def todo_list(g, data, today, x0, R, y, u):
     fd, gap, box = font(SANS, int(27 * u * k)), 38 * u * k, 22 * u * k
     last = y + 102 * u                 # 맨 아래 줄의 글자 밑선 (3개일 때와 같은 자리)
     left = x0 + 40 * u
-    right = R - (60 if n <= 3 else 130) * u   # 많을 때는 오른쪽 위 '갱신' 글자를 피한다
+    right = R - 60 * u
     for i, t in enumerate(items):
         b = last - gap * (n - 1 - i)
         g.rectangle((left, b - box, left + box, b), outline=INK_SOFT, width=max(2, int(2 * u)))
@@ -279,15 +279,12 @@ def draw(data, today, W, H, out):
             s = label(t)
             g.text((X(i) + (col - text_w(g, s, f_total)) / 2, bottom + 4 * u), s, font=f_total, fill=BLUE)
 
-    stamp = f"{today.month}/{today.day} 갱신" + (" · 예시" if data.get("example") else "")
-    # 아침에 만들 때 오늘은 아직 0시간이므로, 기록이 없는 오늘은 나누는 날수에서 뺀다.
-    passed = today.weekday() + (1 if totals[today.weekday()] else 0)
+    # 하루 평균 공부는 전날까지의 평균이다 (오늘은 아직 끝나지 않았으므로 뺀다). 월요일에는 지난 날이 없어 '–'.
+    prior = [t for t in totals[:today.weekday()] if t is not None]
     stats = [("주간 공부", f"{label(week_study)}시간"),
-             ("하루 평균 공부", f"{label(week_study / passed)}시간" if passed else "–"),
+             ("하루 평균 공부", f"{label(sum(prior) / len(prior))}시간" if prior else "–"),
              ("평균 수면", f"{label(sleep_hours / sleep_days)}시간" if sleep_days else "–")]
     footer(g, stats, L, R, bottom + total_h, u)
-    # 갱신 날짜는 머리말 줄 바로 위 오른쪽에 둔다.
-    g.text((R, H * TOP_EMPTY - 10 * u), stamp, font=font(SANS, int(24 * u)), fill=INK_SOFT, anchor="rs")
     im.resize((W // SS, H // SS), Image.LANCZOS).save(out, optimize=True)
 
 

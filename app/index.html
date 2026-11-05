@@ -548,12 +548,13 @@ const dayStat = d => {
 function statHTML() {
   const ds = pDates(), t = ymd(realToday()), W = ds.map(dayStat), has = a => a.study || a.sleep || a.ex;
   const weekH = W.reduce((n, x) => n + x.study, 0);
-  const counted = ds.map((d, i) => ({d, x: W[i]})).filter(({d, x}) => d <= t && (d < t || x.study > 0));
-  const perDay = counted.length ? weekH / counted.length : 0;
+  // 하루 평균 공부는 전날까지의 평균 (오늘은 아직 끝나지 않았으므로 뺀다)
+  const prior = ds.map((d, i) => ({d, x: W[i]})).filter(({d}) => d < t);
+  const perDay = prior.length ? prior.reduce((n, {x}) => n + x.study, 0) / prior.length : null;
   const sl = W.filter(x => x.sleep > 0), sleepAvg = sl.length ? sl.reduce((n, x) => n + x.sleep, 0) / sl.length : null;
   const exN = W.filter(x => x.ex > 0).length;
   const ex = planItems('exams').filter(e => e.date >= t).sort((a, b) => a.date < b.date ? -1 : 1)[0];
-  const facts = [['하루 평균 공부', h1(perDay) + '시간'], ['평균 수면', sleepAvg === null ? '—' : h1(sleepAvg) + '시간'], ['운동', exN + '회']];
+  const facts = [['하루 평균 공부', perDay === null ? '—' : h1(perDay) + '시간'], ['평균 수면', sleepAvg === null ? '—' : h1(sleepAvg) + '시간'], ['운동', exN + '회']];
   const hero = (mode !== 'general' && ex ? `<div class="big"><div class="value">D-${between(realToday(), parse(ex.date))}</div><div class="sub">${md(ex.date)} ${esc(ex.subject || '')}</div></div>` : '')
     + `<div class="big"><div class="label">${pWeek ? md(ds[0]) + '~' + md(ds[6]) + ' ' : '이번 주 '}공부 시간</div><div class="value">${h1(weekH)}<small>시간</small></div></div>`
     + `<div class="facts">${facts.map(([k, v]) => `<div class="fact"><span class="label">${k}</span><span class="num">${v}</span></div>`).join('')}</div>`;
