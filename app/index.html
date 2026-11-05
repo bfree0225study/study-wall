@@ -208,6 +208,10 @@ tr:last-child > * { border-bottom: 0; }
 .line text { fill: var(--ink); font-family: var(--font-num); font-size: 12px; }
 .line text.x { fill: var(--ink-2); }
 .plist{list-style:none;margin:8px 0 0;padding:0;font-size:13px}.plist li{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid var(--line)}.plist button{background:none;border:1px solid var(--line);cursor:pointer;padding:0 8px}.padd span{min-width:7em;color:var(--ink-2)}
+.tt { --row: 12px; }
+.tt .hours, .tt .col { height: calc(28 * var(--row)); }
+.tt .col { background-image: repeating-linear-gradient(to bottom, transparent 0, transparent calc(2 * var(--row) - 1px), var(--line) calc(2 * var(--row) - 1px), var(--line) calc(2 * var(--row))); }
+.tt .ev { left: 0; right: 0; box-sizing: border-box; }
 </style>
 </head>
 <body>
