@@ -626,9 +626,32 @@ function statHTML() {
     `<div class="ev ${esc(x.kind || '')}" style="top:${(tn(x.start) - from) / span * 100}%;height:${(tn(x.end) - tn(x.start)) / span * 100}%" title="${esc(x.start)}~${esc(x.end)}">${esc(x.title)}</div>`).join('') + '</div>').join('');
   const ttb = tt.length ? `<section class="block wide"><h2>주간 시간표 (학원·운동)</h2><div class="tt">${g}</div></section>` : '';
 
+  // 지난주와 비교 (이번 주는 아직 안 끝났으니 오늘까지의 요일만 같은 조건으로 비교한다)
+  const ps = ds.map(d => ymd(addDays(parse(d), -7))), PW = ps.map(dayStat);
+  const upto = pWeek === 0 ? ds.map(d => d <= t) : ds.map(() => true), idx = ds.map((_, i) => i).filter(i => upto[i]);
+  const sumOf = (A, f) => idx.reduce((n, i) => n + f(A[i]), 0);
+  const avgOf = (A, f) => { const v = idx.map(i => f(A[i])).filter(x => x > 0); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const cur = {study: sumOf(W, x => x.study), sleep: avgOf(W, x => x.sleep), ex: idx.filter(i => W[i].ex > 0).length};
+  const prv = {study: sumOf(PW, x => x.study), sleep: avgOf(PW, x => x.sleep), ex: idx.filter(i => PW[i].ex > 0).length};
+  const dif = (a, b, unit) => { if (a === null || b === null) return '—'; const d = Math.round((a - b) * 10) / 10; return d === 0 ? '±0' : (d > 0 ? '+' : '−') + h1(Math.abs(d)) + (unit || ''); };
+  const val = (v, unit) => v === null ? '—' : h1(v) + (unit || '');
+  const scope = pWeek === 0 && idx.length < 7 ? `${WD[idx[0]]}~${WD[idx[idx.length - 1]]} 기준` : '';
+  const cmpRows = [['공부 시간', cur.study, prv.study, '시간'], ['하루 평균 공부', idx.length ? cur.study / idx.length : null, idx.length ? prv.study / idx.length : null, '시간'], ['평균 수면', cur.sleep, prv.sleep, '시간']]
+    .map(([k, a, b, u]) => `<tr><td>${k}</td><td class="num r">${val(b, u)}</td><td class="num r">${val(a, u)}</td><td class="num r">${dif(a, b, u)}</td></tr>`).join('')
+    + `<tr><td>운동</td><td class="num r">${prv.ex}회</td><td class="num r">${cur.ex}회</td><td class="num r">${cur.ex === prv.ex ? '±0' : (cur.ex > prv.ex ? '+' : '−') + Math.abs(cur.ex - prv.ex) + '회'}</td></tr>`;
+  const pw = {}; idx.forEach(i => Object.entries(PW[i].subj).forEach(([k, v]) => pw[k] = (pw[k] || 0) + v));
+  const cw = {}; idx.forEach(i => Object.entries(W[i].subj).forEach(([k, v]) => cw[k] = (cw[k] || 0) + v));
+  const cNames = [...new Set([...Object.keys(cw), ...Object.keys(pw)])].sort((a, b) => ((cw[b] || 0) + (pw[b] || 0)) - ((cw[a] || 0) + (pw[a] || 0)));
+  const subjCmp = cNames.length ? `<table style="margin-top:16px"><thead><tr><th>과목</th><th class="r">지난주</th><th class="r">이번주</th><th class="r">차이</th></tr></thead><tbody>${cNames.map(k => `<tr><td>${esc(k)}</td><td class="num r">${h1(pw[k] || 0)}</td><td class="num r">${h1(cw[k] || 0)}</td><td class="num r">${dif(cw[k] || 0, pw[k] || 0)}</td></tr>`).join('')}</tbody></table>` : '';
+  const dayRow = (name, A) => `<tr><td>${name}</td>${ds.map((d, i) => upto[i] ? `<td class="num">${A[i].study ? h1(A[i].study) : '–'}</td>` : '<td class="num">·</td>').join('')}</tr>`;
+  const cmp = `<section class="block wide"><h2>지난주와 비교${scope ? ' · ' + scope : ''}</h2>`
+    + `<table><thead><tr><th></th><th class="r">${md(ps[0])}~${md(ps[6])}</th><th class="r">${md(ds[0])}~${md(ds[6])}</th><th class="r">차이</th></tr></thead><tbody>${cmpRows}</tbody></table>`
+    + `<table class="life" style="margin-top:16px"><thead><tr><th>요일별 공부</th>${WD.map(w => `<th>${w}</th>`).join('')}</tr></thead><tbody>${dayRow('이번', W)}${dayRow('지난', PW)}</tbody></table>`
+    + subjCmp + `</section>`;
+
   $('sheet').innerHTML = mode === 'general'
-    ? subjectTbl('과목별 공부 시간', true) + weekday + trend + monthTbl + life + ttb
-    : subjectTbl('과목별 공부 시간 배분 · ' + (pWeek ? '선택한 주' : '이번 주'), false) + life + ttb;
+    ? cmp + subjectTbl('과목별 공부 시간', true) + weekday + trend + monthTbl + life + ttb
+    : cmp + subjectTbl('과목별 공부 시간 배분 · ' + (pWeek ? '선택한 주' : '이번 주'), false) + life + ttb;
 }
 
 
