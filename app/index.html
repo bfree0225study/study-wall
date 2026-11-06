@@ -607,7 +607,7 @@ function statHTML() {
   const week = {}, total = {};
   W.forEach(x => Object.entries(x.subj).forEach(([k, v]) => week[k] = (week[k] || 0) + v));
   allDates().forEach(d => Object.entries(dayStat(d).subj).forEach(([k, v]) => total[k] = (total[k] || 0) + v));
-  const names = [...new Set([...labels().filter(l => l.type === 'study').map(l => l.t), ...Object.keys(total)])];
+  const names = BASE_LABELS.filter(l => l.type === 'study').map(l => l.t);  // 과목별 표에는 기본 과목만 (직접 만든 항목 제외)
   const rows = names.map(s => ({s, w: week[s] || 0, a: total[s] || 0})).filter(r => r.w > 0).sort((a, b) => b.w - a.w || b.a - a.a);
   const allRows = names.map(s => ({s, w: total[s] || 0, a: total[s] || 0})).filter(r => r.w > 0).sort((a, b) => b.w - a.w), allH = allRows.reduce((n, r) => n + r.w, 0);
   const subjectTbl = (title, withTotal, rs = rows, denom = weekH) => { const mx = Math.max(1, ...rs.map(r => r.w)); return `<section class="block"><h2>${title}</h2><table><thead><tr><th>과목</th><th>시간 막대</th><th class="r">시간</th><th class="r">${withTotal ? '누적' : '비중'}</th></tr></thead><tbody>${rs.map(r =>
