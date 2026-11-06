@@ -100,6 +100,16 @@ def main(folder):
     for t in items(folder, "tasks"):
         if t.get("start") and t.get("end"):
             plan.append({"d": t["date"], "s": t["start"], "e": t["end"], "k": "other", "t": t.get("short") or t["title"]})
+        elif t.get("repeat"):
+            # 반복 할 일: 시작 날짜부터, 매일은 다음 날, 매주는 7일 뒤에 다시 나타난다 (기록장과 같은 규칙)
+            if t.get("date") and t["date"] > today.isoformat():
+                continue
+            done = t.get("done")
+            if done:
+                gap = (today - datetime.date.fromisoformat(done)).days
+                if gap < (7 if t["repeat"] == "weekly" else 1):
+                    continue
+            todos.append({"d": "", "t": t.get("short") or t["title"]})
         else:
             todos.append({"d": t.get("date") or "", "t": t.get("short") or t["title"]})
     # 기록장에서 "할 일로 칠하기"로 칠한 연한 칸

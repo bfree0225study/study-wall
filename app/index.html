@@ -258,7 +258,8 @@ tr:last-child > * { border-bottom: 0; }
       <p id="todo-msg"></p>
       <form class="padd" id="todo-add">
         <input id="todo-t" aria-label="해야 할 일" maxlength="30" placeholder="해야 할 일">
-        <input id="todo-d" type="date" aria-label="날짜(없어도 됨)">
+        <input id="todo-d" type="date" aria-label="날짜(반복이면 시작 날짜, 없어도 됨)">
+        <select id="todo-r" aria-label="반복"><option value="">반복 없음</option><option value="daily">매일</option><option value="weekly">매주</option></select>
         <button class="act" type="submit">추가</button>
       </form>
     </div>
@@ -455,13 +456,21 @@ function drawGrid() {
 // 누르면 완료로 보고 지운다(되돌리기 있음). 날짜가 지난 것은 보이지 않는다.
 let lastDone = null;
 let editTodo = -1;   // 글을 고치는 중인 할 일 (없으면 -1)
+// 반복 할 일: 시작 날짜(date)부터 보이고, 완료하면 매일은 내일, 매주는 7일 뒤에 다시 나타난다(done = 마지막으로 한 날).
+const dueTodo = (x, t) => {
+  if (x.start) return false;
+  if (!x.repeat) return !x.date || x.date >= t;
+  if (x.date && x.date > t) return false;
+  if (!x.done) return true;
+  return x.repeat === 'weekly' ? between(parse(x.done), parse(t)) >= 7 : x.done < t;
+};
 function drawTodos() {
   const t = ymd(realToday());
-  const rows = planItems('tasks').map((x, i) => ({x, i})).filter(({x}) => !x.start && (!x.date || x.date >= t))
+  const rows = planItems('tasks').map((x, i) => ({x, i})).filter(({x}) => dueTodo(x, t))
     .sort((a, b) => (a.x.date || '9999') < (b.x.date || '9999') ? -1 : 1);
   $('todo-list').innerHTML = rows.map(({x, i}) => i === editTodo
     ? `<li><form class="padd" data-edit-form="${i}"><input name="t" value="${esc(x.title)}" maxlength="30" aria-label="할 일 글 수정"><input name="d" type="date" value="${esc(x.date || '')}" aria-label="날짜(없어도 됨)"><button class="act" type="submit">저장</button><button type="button" data-edit-cancel>취소</button></form></li>`
-    : `<li><button type="button" data-todo="${i}">☐ ${x.date ? `<span class="d">${md(x.date)}</span>` : ''}${esc(x.title)}</button><button type="button" class="ed" data-edit-todo="${i}" aria-label="글 수정">수정</button></li>`).join('');
+    : `<li><button type="button" data-todo="${i}">☐ ${x.repeat ? `<span class="d">${x.repeat === 'weekly' ? '매주' : '매일'}</span>` : x.date ? `<span class="d">${md(x.date)}</span>` : ''}${esc(x.title)}</button><button type="button" class="ed" data-edit-todo="${i}" aria-label="글 수정">수정</button></li>`).join('');
   if (editTodo >= 0) { const f = $('todo-list').querySelector('[data-edit-form] input'); if (f && document.activeElement !== f) { f.focus(); f.setSelectionRange(f.value.length, f.value.length); } }
 }
 async function saveTasks(items, msg) {
@@ -474,8 +483,12 @@ $('todo-list').addEventListener('click', e => {
   if (ed && loaded) { editTodo = Number(ed.dataset.editTodo); drawTodos(); return; }
   if (e.target.closest('[data-edit-cancel]')) { editTodo = -1; drawTodos(); return; }
   const b = e.target.closest('[data-todo]'); if (!b || !loaded) return;
-  const items = [...planItems('tasks')], [done] = items.splice(Number(b.dataset.todo), 1);
-  lastDone = done;
+  const items = [...planItems('tasks')], idx = Number(b.dataset.todo);
+  let done;
+  if (items[idx].repeat) {   // 반복 할 일은 지우지 않고 오늘 했다고만 적는다
+    done = items[idx]; lastDone = {prev: done, idx};
+    items[idx] = Object.assign({}, done, {done: ymd(realToday())});
+  } else { [done] = items.splice(idx, 1); lastDone = done; }
   saveTasks(items, `완료: ${esc(done.title)}<button type="button" data-todo-undo>되돌리기</button>`);
 });
 $('todo-list').addEventListener('submit', e => {
@@ -489,13 +502,16 @@ $('todo-list').addEventListener('submit', e => {
 $('todo-msg').addEventListener('click', e => {
   if (!e.target.closest('[data-todo-undo]') || !lastDone) return;
   const item = lastDone; lastDone = null;
+  if (item.prev) { const items = [...planItems('tasks')]; items[item.idx] = item.prev; saveTasks(items, ''); return; }
   saveTasks([...planItems('tasks'), item], '');
 });
 $('todo-add').addEventListener('submit', e => {
   e.preventDefault();
   const title = $('todo-t').value.trim(); if (!title || !loaded) return;
-  saveTasks([...planItems('tasks'), {date: $('todo-d').value || '', subject: '', title}], '');
-  $('todo-t').value = ''; $('todo-d').value = '';
+  const item = {date: $('todo-d').value || '', subject: '', title};
+  if ($('todo-r').value) item.repeat = $('todo-r').value;
+  saveTasks([...planItems('tasks'), item], '');
+  $('todo-t').value = ''; $('todo-d').value = ''; $('todo-r').value = '';
 });
 
 /* ---------- 칠하기 동작 ---------- */
