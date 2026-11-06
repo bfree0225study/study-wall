@@ -107,7 +107,12 @@ def main(folder):
             done = t.get("done")
             if done:
                 gap = (today - datetime.date.fromisoformat(done)).days
-                if gap < (7 if t["repeat"] == "weekly" else 1):
+                if t["repeat"] == "weekly" and t.get("dow") is not None:
+                    # 지정 요일(일요일=0): 가장 가까운 그 요일(오늘 포함) 이후에 했으면 숨긴다
+                    back = ((today.weekday() + 1) % 7 - t["dow"]) % 7
+                    if done >= (today - datetime.timedelta(days=back)).isoformat():
+                        continue
+                elif gap < (7 if t["repeat"] == "weekly" else 1):
                     continue
             todos.append({"d": "", "t": t.get("short") or t["title"]})
         else:

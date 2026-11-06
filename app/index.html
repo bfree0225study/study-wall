@@ -462,7 +462,10 @@ const dueTodo = (x, t) => {
   if (!x.repeat) return !x.date || x.date >= t;
   if (x.date && x.date > t) return false;
   if (!x.done) return true;
-  return x.repeat === 'weekly' ? between(parse(x.done), parse(t)) >= 7 : x.done < t;
+  if (x.repeat !== 'weekly') return x.done < t;
+  if (x.dow == null) return between(parse(x.done), parse(t)) >= 7;
+  const last = ymd(addDays(parse(t), -((parse(t).getDay() - x.dow + 7) % 7)));   // 가장 가까운 지정 요일(오늘 포함)
+  return x.done < last;
 };
 function drawTodos() {
   const t = ymd(realToday());
@@ -510,6 +513,7 @@ $('todo-add').addEventListener('submit', e => {
   const title = $('todo-t').value.trim(); if (!title || !loaded) return;
   const item = {date: $('todo-d').value || '', subject: '', title};
   if ($('todo-r').value) item.repeat = $('todo-r').value;
+  if (item.repeat === 'weekly') item.dow = (item.date ? parse(item.date) : realToday()).getDay();   // 시작 날짜의 요일에 맞춘다
   saveTasks([...planItems('tasks'), item], '');
   $('todo-t').value = ''; $('todo-d').value = ''; $('todo-r').value = '';
 });
