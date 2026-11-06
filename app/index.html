@@ -608,8 +608,8 @@ function statHTML() {
   W.forEach(x => Object.entries(x.subj).forEach(([k, v]) => week[k] = (week[k] || 0) + v));
   allDates().forEach(d => Object.entries(dayStat(d).subj).forEach(([k, v]) => total[k] = (total[k] || 0) + v));
   const names = [...new Set([...labels().filter(l => l.type === 'study').map(l => l.t), ...Object.keys(total)])];
-  const rows = names.map(s => ({s, w: week[s] || 0, a: total[s] || 0})).sort((a, b) => b.w - a.w || b.a - a.a);
-  const allRows = names.map(s => ({s, w: total[s] || 0, a: total[s] || 0})).sort((a, b) => b.w - a.w), allH = allRows.reduce((n, r) => n + r.w, 0);
+  const rows = names.map(s => ({s, w: week[s] || 0, a: total[s] || 0})).filter(r => r.w > 0).sort((a, b) => b.w - a.w || b.a - a.a);
+  const allRows = names.map(s => ({s, w: total[s] || 0, a: total[s] || 0})).filter(r => r.w > 0).sort((a, b) => b.w - a.w), allH = allRows.reduce((n, r) => n + r.w, 0);
   const subjectTbl = (title, withTotal, rs = rows, denom = weekH) => { const mx = Math.max(1, ...rs.map(r => r.w)); return `<section class="block"><h2>${title}</h2><table><thead><tr><th>과목</th><th>시간 막대</th><th class="r">시간</th><th class="r">${withTotal ? '누적' : '비중'}</th></tr></thead><tbody>${rs.map(r =>
     `<tr><td>${esc(r.s)}</td><td class="barcell"><span class="track"><span class="fill" style="width:${r.w / mx * 100}%"></span></span></td><td class="num r">${h1(r.w)}</td><td class="num r">${withTotal ? h1(r.a) : (denom ? Math.round(r.w / denom * 100) : 0) + '%'}</td></tr>`).join('')}</tbody></table></section>`; };
 
