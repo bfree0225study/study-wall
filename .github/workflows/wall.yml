@@ -9,6 +9,8 @@ on:
     - cron: "10 15 * * *"
     - cron: "0 20 * * *"
     - cron: "40 20 * * *"
+    # 낮 동안 지난 일정 칸이 잠금화면에서 사라지게, 30분마다 새로 만든다 (바뀐 게 없으면 올리지 않는다)
+    - cron: "7,37 * * * *"
 
 permissions:
   contents: write
@@ -57,8 +59,8 @@ jobs:
 
       - name: 올리기
         run: |
-          # 예약 실행일 때만 확인용 파일을 갱신해, 저장소가 60일 쉬어서 예약이 꺼지는 일을 막는다.
-          if [ "${{ github.event_name }}" = "schedule" ]; then date -u +%FT%TZ > .heartbeat; fi
+          # 하루 한 번(한국 자정 직후 예약)만 확인용 파일을 갱신해, 저장소가 60일 쉬어서 예약이 꺼지는 일을 막는다.
+          if [ "${{ github.event.schedule }}" = "10 15 * * *" ]; then date -u +%FT%TZ > .heartbeat; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "data${WALL_SUFFIX}.json" "phone${WALL_SUFFIX}.png" "tablet${WALL_SUFFIX}.png"
