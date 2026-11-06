@@ -63,6 +63,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .pnav button { background: none; border: 1px solid var(--line); min-width: 36px; min-height: 32px; padding: 0 8px; cursor: pointer; }
 .pbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--bg); padding-block: 6px; }
 .pens { display: flex; flex-wrap: wrap; gap: 4px; }
+.penx { margin-left: 8px; padding: 0 2px; font-size: 13px; opacity: .75; }
 .pen { min-width: 42px; min-height: 36px; padding: 0 8px; background: none; border: 1px solid var(--line); cursor: pointer; }
 .pen.study { color: var(--pen-blue); border-color: var(--pen-blue); }
 .pen.other { color: var(--pen-red); border-color: var(--pen-red); }
@@ -425,7 +426,8 @@ function drawSum() {
 function drawPens() {
   $('pg').classList.toggle('painting', pen !== undefined);
   const mark = l => !!pen && l.t === pen.t;
-  $('pens').innerHTML = labels().map((l, i) => `<button class="pen ${l.type}" type="button" data-pen="${i}" aria-pressed="${mark(l)}">${esc(l.t)}</button>`).join('')
+  // 직접 만든 항목은 고른 상태에서 ×를 누르면 목록에서 지운다 (이미 칠한 칸은 그대로 남는다)
+  $('pens').innerHTML = labels().map((l, i) => `<button class="pen ${l.type}" type="button" data-pen="${i}" aria-pressed="${mark(l)}">${esc(l.t)}${i >= BASE_LABELS.length && mark(l) ? '<span class="penx" data-delpen="' + i + '" aria-label="목록에서 지우기">✕</span>' : ''}</button>`).join('')
     + `<button class="pen" type="button" data-pen="-1" aria-pressed="${pen === null}">지우개</button>`
     + `<button class="pen" type="button" data-later aria-pressed="${pLater}">할 일로 칠하기</button>`
     + `<button class="pen" type="button" data-undo${pUndo.length ? '' : ' disabled'}>되돌리기</button>`;
@@ -534,7 +536,16 @@ $('pg').addEventListener('contextmenu', e => { if (e.target.closest('.pcol')) e.
 const pUp = e => { if (!hold || e.pointerId !== hold.id) return; hold = null; pCommit(); };
 $('pg').addEventListener('pointerup', pUp);
 $('pg').addEventListener('pointercancel', e => { if (hold && e.pointerId === hold.id) pAbort(); });
-$('pens').addEventListener('click', e => {
+$('pens').addEventListener('click', async e => {
+  const del = e.target.closest('[data-delpen]');
+  if (del) {
+    const l = labels()[Number(del.dataset.delpen)]; if (!l || !loaded) return;
+    const items = planItems('labels').filter(x => x.t !== l.t);
+    store.plan.labels = {items}; if (pen && pen.t === l.t) pen = undefined; drawPens();
+    try { await call('save', [{key: 'plan/labels', doc: {items}}]); }
+    catch (err) { pSay('항목을 지우지 못했습니다. 새로고침한 뒤 다시 해 주세요.'); }
+    return;
+  }
   if (e.target.closest('[data-undo]')) { pBack(); return; }
   if (e.target.closest('[data-later]')) { pLater = !pLater; drawPens(); return; }
   const b = e.target.closest('[data-pen]'); if (!b) return;
