@@ -601,11 +601,17 @@ $('p-add').addEventListener('submit', async e => {
 /* ---------- 통계 (칠한 칸에서 계산) ---------- */
 const isEx = t => { const l = labels().find(x => x.t === t); return !!l && l.kind === '운동'; };
 const allDates = () => Object.keys(store.days).sort();
+// 자기 전 새벽 공부(그날 0시부터 첫 잠 시작 전, 첫 잠이 6시 이전일 때)는 전날 공부 시간으로 센다.
+const cellsFor = d => pDates().includes(d) && pCells[d] ? pCells[d] : cellsOf(d);
+const earlyEnd = a => { const f = a.findIndex(v => v && v.startsWith('sleep|')); return f > 0 && f <= 12 ? f : 0; };
 const dayStat = d => {
-  const a = pDates().includes(d) && pCells[d] ? pCells[d] : cellsOf(d), subj = {};
+  const a = cellsFor(d), cut = earlyEnd(a), subj = {};
   let study = 0, sleep = 0, ex = 0;
-  a.forEach(v => { if (!v) return; const [k, t] = v.split('|');
-    if (k === 'study') { study += .5; subj[t] = (subj[t] || 0) + .5; } else if (k === 'sleep') sleep += .5; else if (k === 'other' && isEx(t)) ex += .5; });
+  const add = t => { study += .5; subj[t] = (subj[t] || 0) + .5; };
+  a.forEach((v, i) => { if (!v) return; const [k, t] = v.split('|');
+    if (k === 'study') { if (i >= cut) add(t); } else if (k === 'sleep') sleep += .5; else if (k === 'other' && isEx(t)) ex += .5; });
+  const nx = cellsFor(ymd(addDays(parse(d), 1))), nc = earlyEnd(nx);   // 다음 날 새벽 공부를 오늘 것으로
+  nx.forEach((v, i) => { if (i < nc && v && v.startsWith('study|')) add(v.split('|')[1]); });
   return {study, sleep, ex, subj};
 };
 function statHTML() {

@@ -60,6 +60,15 @@ def hours(t):
     return int(h) + int(m) / 60
 
 
+def early_study(rec):
+    """그날 0시부터 첫 잠 시작 전까지의 공부 시간(첫 잠이 6시 이전일 때만)."""
+    sleeps = sorted(hours(s) for s, _ in rec.get("sleep", []))
+    if not sleeps or not 0 < sleeps[0] <= 6:
+        return 0
+    cut = sleeps[0]
+    return sum(max(0, min(hours(e), cut) - hours(s)) for s, e, kind, _ in rec.get("blocks", []) if kind == "study")
+
+
 def label(n):
     return f"{n:.1f}".removesuffix(".0")
 
@@ -259,6 +268,8 @@ def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_emp
         for s, _, _, _ in rec.get("blocks", []):
             if s in ends:
                 g.line((X(i) + pad, Y(hours(s)), X(i + 1) - pad, Y(hours(s))), fill=(150, 150, 150), width=max(1, int(1 * u)))
+        # 자기 전 새벽 공부(0시~첫 잠 시작, 첫 잠이 6시 이전)는 전날 공부 시간으로 센다.
+        spent += early_study(data["days"].get((d + datetime.timedelta(days=1)).isoformat(), {})) - early_study(rec)
         totals.append(spent if d <= today else None)
         week_study += spent if d <= today else 0
 
