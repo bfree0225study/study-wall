@@ -688,8 +688,8 @@ function statHTML() {
     + subjCmp + `</section>`;
 
   $('sheet').innerHTML = mode === 'general'
-    ? cmp + subjectTbl('과목별 공부 시간', true) + weekday + trend + monthTbl + life + ttb
-    : cmp + subjectTbl('과목별 공부 시간 배분 · 전체 기록', false, allRows, allH) + life + ttb;
+    ? subjectTbl('과목별 공부 시간', true) + weekday + trend + monthTbl + life + ttb
+    : subjectTbl('과목별 공부 시간 배분 · 전체 기록', false, allRows, allH) + life + ttb;
 }
 
 
