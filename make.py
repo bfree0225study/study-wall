@@ -69,6 +69,15 @@ def early_study(rec):
     return sum(max(0, min(hours(e), cut) - hours(s)) for s, e, kind, _ in rec.get("blocks", []) if kind == "study")
 
 
+def tail_sleep(rec):
+    """밤 12시까지 이어진 잠의 시간."""
+    return sum(hours(e) - hours(s) for s, e in rec.get("sleep", []) if e == "24:00")
+
+
+def starts_at_midnight(rec):
+    return any(s == "00:00" for s, _ in rec.get("sleep", []))
+
+
 def label(n):
     return f"{n:.1f}".removesuffix(".0")
 
@@ -252,8 +261,16 @@ def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_emp
         for s, e in rec.get("sleep", []):
             box = (X(i) + pad, Y(hours(s)) + gap, X(i + 1) - pad, Y(hours(e)) - gap)
             g.rectangle(box, fill=SLEEP_FILL)
-            sleep_hours += hours(e) - hours(s)
-        if rec.get("sleep"):
+        # 잠이 자정을 넘어 다음 날까지 이어지면, 이어진 잠 전부를 깬 날(다음 날)의 수면으로 센다.
+        prev_rec = data["days"].get((d - datetime.timedelta(days=1)).isoformat(), {})
+        next_rec = data["days"].get((d + datetime.timedelta(days=1)).isoformat(), {})
+        night = sum(hours(e) - hours(s) for s, e in rec.get("sleep", []))
+        if starts_at_midnight(next_rec):
+            night -= tail_sleep(rec)
+        if starts_at_midnight(rec):
+            night += tail_sleep(prev_rec)
+        sleep_hours += night
+        if night > 0:
             sleep_days += 1
         for s, e, kind, name in rec.get("blocks", []):
             a, b = hours(s), hours(e)

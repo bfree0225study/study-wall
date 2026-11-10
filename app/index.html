@@ -426,10 +426,8 @@ function drawCol(date) {
 }
 function drawSum() {
   if (typeof statHTML === 'function' && loaded) statHTML();
-  const ds = pDates(), all = ds.flatMap(d => pCells[d] || []);
-  const study = all.filter(v => v.startsWith('study|')).length / 2;
-  const nights = ds.filter(d => (pCells[d] || []).some(v => v.startsWith('sleep|'))).length;
-  const sl = all.filter(v => v.startsWith('sleep|')).length / 2;
+  const S = pDates().map(dayStat);
+  const study = S.reduce((n, x) => n + x.study, 0), nights = S.filter(x => x.sleep > 0).length, sl = S.reduce((n, x) => n + x.sleep, 0);
   $('p-sum').textContent = `주간 ${h1(study)}시간 · 평균 수면 ${nights ? h1(sl / nights) + '시간' : '–'}`;
 }
 function drawPens() {
@@ -613,6 +611,9 @@ const allDates = () => Object.keys(store.days).sort();
 // 자기 전 새벽 공부(그날 0시부터 첫 잠 시작 전, 첫 잠이 6시 이전일 때)는 전날 공부 시간으로 센다.
 const cellsFor = d => pDates().includes(d) && pCells[d] ? pCells[d] : cellsOf(d);
 const earlyEnd = a => { const f = a.findIndex(v => v && v.startsWith('sleep|')); return f > 0 && f <= 12 ? f : 0; };
+// 잠이 자정을 넘어 다음 날까지 이어지면, 이어진 잠 전부를 깬 날(다음 날)의 수면으로 센다.
+const isSleep = v => !!v && v.startsWith('sleep|');
+const tailSleep = a => { let n = 0; while (n < SLOTS && isSleep(a[SLOTS - 1 - n])) n++; return n; };   // 밤 12시까지 이어진 잠(칸 수)
 const dayStat = d => {
   const a = cellsFor(d), cut = earlyEnd(a), subj = {};
   let study = 0, sleep = 0, ex = 0;
@@ -621,6 +622,9 @@ const dayStat = d => {
     if (k === 'study') { if (i >= cut) add(t); } else if (k === 'sleep') sleep += .5; else if (k === 'other' && isEx(t)) ex += .5; });
   const nx = cellsFor(ymd(addDays(parse(d), 1))), nc = earlyEnd(nx);   // 다음 날 새벽 공부를 오늘 것으로
   nx.forEach((v, i) => { if (i < nc && v && v.startsWith('study|')) add(v.split('|')[1]); });
+  if (isSleep(nx[0])) sleep -= tailSleep(a) / 2;                                             // 내 밤잠은 다음 날로 넘김
+  const pv = cellsFor(ymd(addDays(parse(d), -1)));
+  if (isSleep(a[0])) sleep += tailSleep(pv) / 2;                                              // 어젯밤 이어진 잠을 받음
   return {study, sleep, ex, subj};
 };
 function statHTML() {
