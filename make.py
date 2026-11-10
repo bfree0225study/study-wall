@@ -278,17 +278,29 @@ def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_emp
             items = [p for p in data.get("weekly", []) if p["dow"] == WD[i]]
             items += [p for p in data.get("plan", []) if p["d"] == d.isoformat()]
             done = rec.get("blocks", [])
+            skips = sorted((hours(s), hours(e)) for s, e in rec.get("skips", []))
             for p in items:
-                a, b = hours(p["s"]), hours(p["e"])
+                a0, b0 = hours(p["s"]), hours(p["e"])
                 # 오늘은 이미 끝난 시간의 일정을 지운다.
-                if d == today and b <= now_h:
+                if d == today and b0 <= now_h:
                     continue
                 # 이미 칠한 시간과 겹치면 기록을 우선한다.
-                if any(a < hours(e) and hours(s) < b for s, e, _, _ in done):
+                if any(a0 < hours(e) and hours(s) < b0 for s, e, _, _ in done):
                     continue
-                box = (X(i) + pad, Y(a) + gap_plan, X(i + 1) - pad, Y(b) - gap_plan)
-                g.rectangle(box, fill=BLUE_PLAN if p.get("k") == "study" else SCHOOL_PLAN if p.get("k") == "school" else RED_PLAN)
-                box_text(g, box, p["t"], INK_SOFT, u)
+                # 기록장에서 지우개로 지운 시간은 빼고 남은 조각만 그린다.
+                pieces, cur = [], a0
+                for ss, se in skips:
+                    if se <= cur or ss >= b0:
+                        continue
+                    if ss > cur:
+                        pieces.append((cur, ss))
+                    cur = max(cur, se)
+                if cur < b0:
+                    pieces.append((cur, b0))
+                for a, b in pieces:
+                    box = (X(i) + pad, Y(a) + gap_plan, X(i + 1) - pad, Y(b) - gap_plan)
+                    g.rectangle(box, fill=BLUE_PLAN if p.get("k") == "study" else SCHOOL_PLAN if p.get("k") == "school" else RED_PLAN)
+                    box_text(g, box, p["t"], INK_SOFT, u)
 
     # 각 날짜 아래 하루 공부 합계
     f_total = font(BOLD, int(32 * u))

@@ -61,7 +61,8 @@ def main(folder):
         if isinstance(d.get("spans"), list):
             days[d["date"]] = {
                 "sleep": [[s, e] for s, e, _, k in d["spans"] if k == "sleep"],
-                "blocks": [[s, e, k, t] for s, e, t, k in d["spans"] if k != "sleep" and not k.startswith("plan-")],
+                "blocks": [[s, e, k, t] for s, e, t, k in d["spans"] if k not in ("sleep", "skip") and not k.startswith("plan-")],
+                "skips": [[s, e] for s, e, _, k in d["spans"] if k == "skip"],
             }
         else:
             days[d["date"]] = {"sleep": [], "blocks": from_logs(d)}

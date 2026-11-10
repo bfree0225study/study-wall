@@ -389,19 +389,26 @@ function studyAfter(w) {
   const ends = planItems('timetable').filter(x => x.day === w && x.kind === '운동').map(x => x.end).sort();
   return ends.length && ends[ends.length - 1] < '24:00' ? ends[ends.length - 1] : null;
 }
+// 주간 시간표가 그 날짜에 깔아 주는 연한 칸 (저장하지 않음). 이미 칠한 칸은 그대로 둔다.
+function timetableCells(date, a) {
+  const o = Array(SLOTS).fill('');
+  const dow = WD[wdIdx(new Date(date + 'T00:00'))];
+  planItems('timetable').filter(x => x.day === dow).forEach(x => {
+    const v = (x.kind === '운동' ? 'plan-other|' : x.kind === '학교' ? 'plan-school|' : 'plan-study|') + x.title;
+    for (let i = timeSlot(x.start); i < timeSlot(x.end) && i < SLOTS; i++) if (!a[i]) o[i] = v;
+  });
+  const sa = studyAfter(dow);
+  if (sa) for (let i = timeSlot(sa); i < SLOTS; i++) if (!a[i] && !o[i]) o[i] = 'plan-study|공부';
+  return o;
+}
 function drawCol(date) {
   const col = document.querySelector(`.pcol[data-d="${date}"]`); if (!col) return;
   const a = [...pCells[date]];
   if (date >= ymd(realToday())) {
-    const dow = WD[wdIdx(new Date(date + 'T00:00'))];
-    // 주간 시간표의 학원·운동을 할 일(연한 칸)로 보여 준다. 이미 칠한 칸은 그대로 둔다. (저장하지 않음)
-    planItems('timetable').filter(x => x.day === dow).forEach(x => {
-      const v = (x.kind === '운동' ? 'plan-other|' : x.kind === '학교' ? 'plan-school|' : 'plan-study|') + x.title;
-      for (let i = timeSlot(x.start); i < timeSlot(x.end) && i < SLOTS; i++) if (!a[i]) a[i] = v;
-    });
-    const sa = studyAfter(dow);
-    if (sa) for (let i = timeSlot(sa); i < SLOTS; i++) if (!a[i]) a[i] = 'plan-study|공부';
+    // 주간 시간표의 학원·운동을 할 일(연한 칸)로 보여 준다. 지우개로 지운 칸('skip')에는 깔지 않는다.
+    timetableCells(date, a).forEach((v, i) => { if (v && !a[i]) a[i] = v; });
   }
+  for (let i = 0; i < SLOTS; i++) if (a[i] === 'skip|') a[i] = '';
   // 해야 할 일(연한 칸)은 그 시간이 지나면 지운다. 지난 날은 전부, 오늘은 지난 칸만.
   const nowIdx = date < ymd(realToday()) ? SLOTS : date === ymd(realToday()) ? Math.floor((new Date().getHours() * 60 + new Date().getMinutes()) / (1440 / SLOTS)) : 0;
   for (let i = 0; i < nowIdx; i++) if (a[i] && a[i].startsWith('plan-')) a[i] = '';
@@ -524,7 +531,9 @@ let pDrag = null, hold = null;
 const slotAt = (col, y) => { const r = col.getBoundingClientRect(); return Math.max(0, Math.min(SLOTS - 1, Math.floor((y - r.top) / r.height * SLOTS))); };
 function pFill(i) {
   const a = pCells[pDrag.date], step = i >= pDrag.last ? 1 : -1;
-  for (let k = pDrag.last; ; k += step) { a[k] = pDrag.value; if (k === i) break; }
+  // 지울 때: 주간 시간표가 깔아 준 칸이면 '지움'(skip)으로 남겨, 다시 깔리지 않게 한다.
+  const tt = pDrag.value === '' && pDrag.date >= ymd(realToday()) ? timetableCells(pDrag.date, a.map(v => v === 'skip|' ? '' : v)) : null;
+  for (let k = pDrag.last; ; k += step) { a[k] = pDrag.value === '' && tt && (tt[k] || a[k] === 'skip|') ? 'skip|' : pDrag.value; if (k === i) break; }
   pDrag.last = i; drawCol(pDrag.date);
 }
 function pCommit() { if (!pDrag) return; pDirty.add(pDrag.date); pDrag = null; clearTimeout(pTimer); pTimer = setTimeout(pSave, 600); drawPens(); }
