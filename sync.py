@@ -116,7 +116,7 @@ def main(folder):
                 elif gap < (7 if t["repeat"] == "weekly" else 1):
                     continue
             todos.append({"d": "", "t": t.get("short") or t["title"]})
-        else:
+        elif not t.get("date") or t["date"] == today.isoformat():  # 날짜를 정한 할 일은 그날에만
             todos.append({"d": t.get("date") or "", "t": t.get("short") or t["title"]})
     # 기록장에서 "할 일로 칠하기"로 칠한 연한 칸
     for date in week & set(every):

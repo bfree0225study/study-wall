@@ -469,7 +469,7 @@ let editTodo = -1;   // 글을 고치는 중인 할 일 (없으면 -1)
 // 반복 할 일: 시작 날짜(date)부터 보이고, 완료하면 매일은 내일, 매주는 7일 뒤에 다시 나타난다(done = 마지막으로 한 날).
 const dueTodo = (x, t) => {
   if (x.start) return false;
-  if (!x.repeat) return !x.date || x.date >= t;
+  if (!x.repeat) return !x.date || x.date === t;   // 날짜를 정한 할 일은 그날에만 보인다
   if (x.date && x.date > t) return false;
   if (!x.done) return true;
   if (x.repeat !== 'weekly') return x.done < t;
