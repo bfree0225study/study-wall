@@ -115,8 +115,10 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .todo ul { list-style: none; margin: 0; padding: 0; }
 .todo li { display: flex; align-items: center; gap: 8px; }
 .todo li .ed { border: 1px solid var(--line); font-size: 12px; padding: 1px 7px; color: var(--ink-2); }
-.todo li .mv { padding: 1px 6px; margin-left: -4px; }
 .todo li button[data-todo] { margin-right: auto; }
+.todo li .grip { touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; color: var(--ink-2); font-size: 18px; line-height: 1; padding: 6px 4px 6px 12px; }
+.todo li.dragging { background: var(--bg); box-shadow: 0 1px 0 var(--ink-2), 0 -1px 0 var(--ink-2); position: relative; z-index: 2; }
+.todo li.dragging .grip { cursor: grabbing; color: var(--ink); }
 .todo li button { background: none; border: 0; padding: 5px 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
 .todo .d { color: var(--ink-2); margin-right: 6px; font-family: var(--font-num); }
 .todo #todo-msg { margin: 0; font-size: 12.5px; color: var(--ink-2); }
@@ -478,27 +480,48 @@ const dueTodo = (x, t) => {
 let todoOrder = [];
 function drawTodos() {
   const t = ymd(realToday());
-  // 순서 = 우선순위. ▲▼로 바꾼 순서가 그대로 저장되고 잠금화면에도 같은 순서로 나온다.
+  // 순서 = 우선순위. ≡를 끌어서 바꾼 순서가 그대로 저장되고 잠금화면에도 같은 순서로 나온다.
   const rows = planItems('tasks').map((x, i) => ({x, i})).filter(({x}) => dueTodo(x, t));
   todoOrder = rows.map(r => r.i);
   $('todo-list').innerHTML = rows.map(({x, i}) => i === editTodo
     ? `<li><form class="padd" data-edit-form="${i}"><input name="t" value="${esc(x.title)}" maxlength="30" aria-label="할 일 글 수정"><input name="d" type="date" value="${esc(x.date || '')}" aria-label="날짜(없어도 됨)"><button class="act" type="submit">저장</button><button type="button" data-edit-cancel>취소</button></form></li>`
-    : `<li><button type="button" data-todo="${i}">☐ ${x.repeat ? `<span class="d">${x.repeat === 'weekly' ? '매주' : '매일'}</span>` : x.date ? `<span class="d">${md(x.date)}</span>` : ''}${esc(x.title)}</button><button type="button" class="ed" data-edit-todo="${i}" aria-label="글 수정">수정</button><button type="button" class="ed mv" data-mv="${i}" data-dir="-1" aria-label="위로">▲</button><button type="button" class="ed mv" data-mv="${i}" data-dir="1" aria-label="아래로">▼</button></li>`).join('');
+    : `<li><button type="button" data-todo="${i}">☐ ${x.repeat ? `<span class="d">${x.repeat === 'weekly' ? '매주' : '매일'}</span>` : x.date ? `<span class="d">${md(x.date)}</span>` : ''}${esc(x.title)}</button><button type="button" class="ed" data-edit-todo="${i}" aria-label="글 수정">수정</button><span class="grip" data-grip="${i}" aria-label="끌어서 순서 바꾸기">≡</span></li>`).join('');
   if (editTodo >= 0) { const f = $('todo-list').querySelector('[data-edit-form] input'); if (f && document.activeElement !== f) { f.focus(); f.setSelectionRange(f.value.length, f.value.length); } }
 }
+// ≡를 잡고 위아래로 끌어 순서(우선순위)를 바꾼다. 놓으면 저장.
+let tDrag = null;
+$('todo-list').addEventListener('pointerdown', e => {
+  const g = e.target.closest('[data-grip]'); if (!g || !loaded || tDrag) return;
+  e.preventDefault();
+  const lis = [...$('todo-list').children], li = g.closest('li'), from = lis.indexOf(li);
+  tDrag = {id: e.pointerId, y0: e.clientY, lis, from, to: from, rects: lis.map(l => l.getBoundingClientRect())};
+  g.setPointerCapture(e.pointerId); li.classList.add('dragging');
+});
+$('todo-list').addEventListener('pointermove', e => {
+  if (!tDrag || e.pointerId !== tDrag.id) return;
+  const {lis, from, rects} = tDrag, dy = e.clientY - tDrag.y0, h = rects[from].height, mid = rects[from].top + h / 2 + dy;
+  const to = rects.filter((r, k) => k !== from && r.top + r.height / 2 < mid).length;
+  tDrag.to = to;
+  lis.forEach((l, k) => { l.style.transform = k === from ? `translateY(${dy}px)` : from < k && k <= to ? `translateY(${-h}px)` : to <= k && k < from ? `translateY(${h}px)` : ''; });
+});
+const tDrop = e => {
+  if (!tDrag || e.pointerId !== tDrag.id) return;
+  const {lis, from, to} = tDrag; tDrag = null;
+  lis.forEach(l => { l.style.transform = ''; l.classList.remove('dragging'); });
+  if (e.type === 'pointercancel' || to === from) return;
+  const order = [...todoOrder], [m] = order.splice(from, 1); order.splice(to, 0, m);
+  const src = planItems('tasks'), items = [...src];
+  todoOrder.forEach((slot, j) => { items[slot] = src[order[j]]; });   // 숨은 할 일 자리는 그대로 둔다
+  editTodo = -1; saveTasks(items, '');
+};
+$('todo-list').addEventListener('pointerup', tDrop);
+$('todo-list').addEventListener('pointercancel', tDrop);
 async function saveTasks(items, msg) {
   store.plan.tasks = {items}; drawTodos(); $('todo-msg').innerHTML = msg;
   try { await call('save', [{key: 'plan/tasks', doc: {items}}]); }
   catch (e) { $('todo-msg').textContent = '저장하지 못했습니다. 새로고침한 뒤 다시 해 주세요.'; }
 }
 $('todo-list').addEventListener('click', e => {
-  const mv = e.target.closest('[data-mv]');
-  if (mv && loaded) {   // 보이는 목록에서 바로 위/아래 할 일과 자리를 바꾼다
-    const from = Number(mv.dataset.mv), k = todoOrder.indexOf(from), to = todoOrder[k + Number(mv.dataset.dir)];
-    if (to === undefined) return;
-    const items = [...planItems('tasks')]; [items[from], items[to]] = [items[to], items[from]];
-    editTodo = -1; saveTasks(items, ''); return;
-  }
   const ed = e.target.closest('[data-edit-todo]');
   if (ed && loaded) { editTodo = Number(ed.dataset.editTodo); drawTodos(); return; }
   if (e.target.closest('[data-edit-cancel]')) { editTodo = -1; drawTodos(); return; }
