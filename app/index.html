@@ -394,12 +394,32 @@ function studyAfter(w) {
   const ends = planItems('timetable').filter(x => x.day === w && x.kind === '운동').map(x => x.end).sort();
   return ends.length && ends[ends.length - 1] < '24:00' ? ends[ends.length - 1] : null;
 }
+// 운동 시간에는 3분할 순서(등→가슴→하체)대로 다음에 할 부위를 적는다. (잠금화면과 같은 규칙)
+// 마지막으로 한 부위의 다음부터, 오늘(오늘 운동을 이미 했으면 내일)부터 운동 시간마다 하나씩 채운다.
+const SPLIT = ['등', '가슴', '하체'];
+const dayParts = d => cellsFor(d).map(v => v.startsWith('other|') ? v.slice(6) : '').filter(t => SPLIT.includes(t));
+function splitFor(date) {
+  const today = ymd(realToday()); let last = null;
+  new Set([...Object.keys(store.days), ...pDates()]).forEach(d => { if (d <= today) { const p = dayParts(d); if (p.length && (!last || d >= last.d)) last = {d, t: p[p.length - 1]}; } });
+  if (!last || date < today) return new Map();
+  let nxt = (SPLIT.indexOf(last.t) + 1) % 3;
+  const tt = planItems('timetable');
+  for (let d = today; d <= date; d = ymd(addDays(parse(d), 1))) {
+    if (d === today && dayParts(d).length) continue;
+    const dow = WD[wdIdx(new Date(d + 'T00:00'))];
+    const items = tt.filter(x => x.kind === '운동' && x.day === dow).sort((p, q) => p.start < q.start ? -1 : 1);
+    if (d === date) return new Map(items.map((x, k) => [x, SPLIT[(nxt + k) % 3]]));
+    nxt = (nxt + items.length) % 3;
+  }
+  return new Map();
+}
 // 주간 시간표가 그 날짜에 깔아 주는 연한 칸 (저장하지 않음). 이미 칠한 칸은 그대로 둔다.
 function timetableCells(date, a) {
   const o = Array(SLOTS).fill('');
   const dow = WD[wdIdx(new Date(date + 'T00:00'))];
+  const parts = splitFor(date);
   planItems('timetable').filter(x => x.day === dow).forEach(x => {
-    const v = (x.kind === '운동' ? 'plan-other|' : x.kind === '학교' ? 'plan-school|' : 'plan-study|') + x.title;
+    const v = (x.kind === '운동' ? 'plan-other|' : x.kind === '학교' ? 'plan-school|' : 'plan-study|') + (parts.get(x) || x.title);
     for (let i = timeSlot(x.start); i < timeSlot(x.end) && i < SLOTS; i++) if (!a[i]) o[i] = v;
   });
   const sa = studyAfter(dow);
