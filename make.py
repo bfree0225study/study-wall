@@ -84,22 +84,29 @@ def label(n):
     return f"{m // 60}:{m % 60:02d}" if m % 60 else str(m // 60)   # 딱 떨어지면 정수로
 
 
-def past_at_this_point(data, monday, today, now_h):
-    """지난 주들이 이 시점(같은 요일, 같은 시각)까지 공부한 시간의 평균. 공부 기록이 있는 주만 센다."""
-    sums = []
+def past_by_day(data, monday, today, now_h):
+    """요일별로 나눈 평균: 지난 주들이 이 시점까지 공부한 시간을 월~일 각 요일에 얼마씩이었는지 낸 평균.
+    지난 요일은 하루 전체, 오늘은 지금 시각까지. 공부 기록이 있는 주만 센다. 월~오늘까지 더하면 아래 합계와 같다."""
+    weeks = []
     for w in range(1, 60):
         mon = monday - datetime.timedelta(days=7 * w)
-        upto, whole = 0.0, 0.0
+        per, whole = [0.0] * 7, 0.0
         for i in range(7):
             for s, e in data.get("past", {}).get((mon + datetime.timedelta(days=i)).isoformat(), []):
                 whole += hours(e) - hours(s)
                 if i < today.weekday():
-                    upto += hours(e) - hours(s)
+                    per[i] += hours(e) - hours(s)
                 elif i == today.weekday():
-                    upto += max(0, min(hours(e), now_h) - hours(s))
+                    per[i] += max(0, min(hours(e), now_h) - hours(s))
         if whole > 0:
-            sums.append(upto)
-    return sum(sums) / len(sums) if sums else None
+            weeks.append(per)
+    return [sum(p[i] for p in weeks) / len(weeks) for i in range(7)] if weeks else None
+
+
+def past_at_this_point(data, monday, today, now_h):
+    """지난 주들이 이 시점(같은 요일, 같은 시각)까지 공부한 시간의 평균. 요일별 평균을 월~오늘까지 더한 값."""
+    by_day = past_by_day(data, monday, today, now_h)
+    return sum(by_day[:today.weekday() + 1]) if by_day else None
 
 
 def text_w(g, s, f):
@@ -346,6 +353,8 @@ def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_emp
 
     # 각 날짜 아래 하루 공부 합계
     f_total = font(BOLD, int(32 * u))
+    f_pavg = font(SANS, int(22 * u))
+    by_day = past_by_day(data, dates[0], today, now_h)
     for i, t in enumerate(totals):
         d = dates[i]
         note = data.get("notes", {}).get(d.isoformat(), []) if d >= today else []
@@ -358,7 +367,13 @@ def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_emp
             g.text((X(i) + (col - text_w(g, s, f_note)) / 2, bottom + 8 * u), s, font=f_note, fill=RED)
         elif t is not None:
             s = label(t)
-            g.text((X(i) + (col - text_w(g, s, f_total)) / 2, bottom + 4 * u), s, font=f_total, fill=BLUE)
+            # 합계 옆에 작고 연하게: 지난 주들의 같은 요일이 이 시점까지 평균 몇 시간이었는지
+            pa = f"({label(by_day[i])})" if by_day else ""
+            w1, w2 = text_w(g, s, f_total), text_w(g, pa, f_pavg) if pa else 0
+            x = X(i) + (col - (w1 + (4 * u + w2 if pa else 0))) / 2
+            g.text((x, bottom + 4 * u), s, font=f_total, fill=BLUE)
+            if pa:
+                g.text((x + w1 + 4 * u, bottom + 4 * u + 30 * u), pa, font=f_pavg, fill=INK_SOFT, anchor="ls")
 
     # 하루 평균 공부는 전날까지의 평균이다 (오늘은 아직 끝나지 않았으므로 뺀다). 월요일에는 지난 날이 없어 '–'.
     prior = [t for t in totals[:today.weekday()] if t is not None]
