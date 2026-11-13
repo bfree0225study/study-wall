@@ -81,7 +81,7 @@ def starts_at_midnight(rec):
 def label(n):
     """시간을 4:45처럼 시:분으로 적는다."""
     m = round(n * 60)
-    return f"{m // 60}:{m % 60:02d}"
+    return f"{m // 60}:{m % 60:02d}" if m % 60 else str(m // 60)   # 딱 떨어지면 정수로
 
 
 def past_at_this_point(data, monday, today, now_h):
@@ -145,6 +145,11 @@ def footer(g, stats, L, R, y, u):
     for name, value in stats:
         g.text((x, y + 34 * u), name, font=fs, fill=INK_SOFT, anchor="ls")
         x += text_w(g, name, fs) + 10 * u
+        if not name:   # 이름 없는 값은 앞 값에 붙여 작고 연하게 (괄호 숫자)
+            x -= 40 * u - 10 * u
+            g.text((x, y + 34 * u), value, font=fs, fill=INK_SOFT, anchor="ls")
+            x += text_w(g, value, fs) + 30 * u
+            continue
         g.text((x, y + 34 * u), value, font=fb, fill=INK, anchor="ls")
         x += text_w(g, value, fb) + 30 * u
 
@@ -359,8 +364,8 @@ def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_emp
     prior = [t for t in totals[:today.weekday()] if t is not None]
     past = past_at_this_point(data, dates[0], today, now_h)
     stats = [("주간 공부", label(week_study)),
-             ("여태 이맘때", label(past) if past is not None else "–"),
-             ("하루 평균", label(sum(prior) / len(prior)) if prior else "–"),
+             *([("", f"({label(past)})")] if past is not None else []),
+             ("하루 평균 공부", label(sum(prior) / len(prior)) if prior else "–"),
              ("평균 수면", label(sleep_hours / sleep_days) if sleep_days else "–")]
     footer(g, stats, L, R, bottom + total_h, u)
     im.resize((W // SS, H // SS), Image.LANCZOS).save(out, optimize=True)

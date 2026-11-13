@@ -141,6 +141,7 @@ body { margin: 0; }
 .big .label { color: var(--ink-2); font-size: 13px; }
 .big .value { font-family: var(--font-num); font-size: clamp(44px, 12.5vw, 96px); line-height: 1.05; white-space: nowrap; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 .big .value small { font-family: var(--font-text); font-size: 13px; letter-spacing: 0; margin-left: 2px; }
+.big .value small.past { font-family: var(--font-num); font-size: 15px; color: var(--ink-2); margin-left: 8px; }
 .big .sub { font-size: 13px; }
 .mx { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; font-size: 0.36em; line-height: 1.1; margin-left: 0.12em; letter-spacing: 0; }
 .mx i { font-style: normal; padding-inline: 0.15em; }
@@ -292,7 +293,7 @@ const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 
 const between = (a, b) => Math.round((b - a) / 864e5);
 const wdIdx = d => (d.getDay() + 6) % 7;
 const md = s => { const d = parse(s); return (d.getMonth() + 1) + '/' + d.getDate(); };
-const h1 = n => { const m = Math.round(n * 60); return Math.floor(m / 60) + ':' + pad(m % 60); };   // 시간을 4:45처럼 시:분으로
+const h1 = n => { const m = Math.round(n * 60); return m % 60 ? Math.floor(m / 60) + ':' + pad(m % 60) : String(m / 60); };   // 시간을 4:45처럼 시:분으로
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const realToday = () => parse(ymd(new Date()));
 const slotTime = i => pad(Math.floor(i / PER)) + ':' + pad((i % PER) * 15);
@@ -703,9 +704,9 @@ function statHTML() {
     }
     if (sums.length) pastAvg = sums.reduce((a, b) => a + b, 0) / sums.length;
   }
-  const facts = [...(pWeek ? [] : [['여태 이맘때', pastAvg === null ? '—' : h1(pastAvg)]]), ['하루 평균 공부', perDay === null ? '—' : h1(perDay)], ['평균 수면', sleepAvg === null ? '—' : h1(sleepAvg)], ['운동', exN + '회']];
+  const facts = [['하루 평균 공부', perDay === null ? '—' : h1(perDay)], ['평균 수면', sleepAvg === null ? '—' : h1(sleepAvg)], ['운동', exN + '회']];
   const hero = (mode !== 'general' && ex ? `<div class="big"><div class="value">D-${between(realToday(), parse(ex.date))}</div><div class="sub">${md(ex.date)} ${esc(ex.subject || '')}</div></div>` : '')
-    + `<div class="big"><div class="label">${pWeek ? md(ds[0]) + '~' + md(ds[6]) + ' ' : '이번 주 '}공부 시간</div><div class="value">${h1(weekH)}</div></div>`
+    + `<div class="big"><div class="label">${pWeek ? md(ds[0]) + '~' + md(ds[6]) + ' ' : '이번 주 '}공부 시간</div><div class="value">${h1(weekH)}${pastAvg === null ? '' : `<small class="past">(${h1(pastAvg)})</small>`}</div></div>`
     + `<div class="facts">${facts.map(([k, v]) => `<div class="fact"><span class="label">${k}</span><span class="num">${v}</span></div>`).join('')}</div>`;
   $('hero').innerHTML = hero;
 
