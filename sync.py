@@ -54,6 +54,11 @@ def main(folder):
         spans = [t for _, _, t, k in d.get("spans") or [] if t in SPLIT and not k.startswith("plan-")]
         return spans or [l.get("note") for l in d.get("logs", []) if l.get("note") in SPLIT]
 
+    # 지난 주들의 공부 칸 ("여태 이맘때" 계산용)
+    past = {d["date"]: [[s, e] for s, e, _, k in d["spans"] if k == "study"]
+            for d in every.values() if d["date"] < monday.isoformat() and isinstance(d.get("spans"), list)}
+    past = {k: v for k, v in past.items() if v}
+
     days = {}
     for d in every.values():
         if d["date"] not in week:
@@ -127,7 +132,7 @@ def main(folder):
         notes.setdefault(e["date"], []).append(SHORT.get(e["subject"], e["subject"]) + " 시험")
 
     data = {"exam": {"name": wall.get("name", "시험"), "date": upcoming[0]["date"]} if upcoming else None,
-            "days": days, "weekly": weekly, "plan": plan, "notes": notes,
+            "days": days, "past": past, "weekly": weekly, "plan": plan, "notes": notes,
             "todos": todos}  # 기록장에서 정한 순서(우선순위) 그대로
     sfx = os.environ.get("WALL_SUFFIX", "")  # 시험 기간에는 data_new.json으로 따로 쓴다
     with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), f"data{sfx}.json"), "w", encoding="utf-8") as f:

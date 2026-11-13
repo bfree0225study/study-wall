@@ -292,7 +292,7 @@ const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 
 const between = (a, b) => Math.round((b - a) / 864e5);
 const wdIdx = d => (d.getDay() + 6) % 7;
 const md = s => { const d = parse(s); return (d.getMonth() + 1) + '/' + d.getDate(); };
-const h1 = n => (Math.round(n * 10) / 10).toFixed(1).replace(/\.0$/, '');
+const h1 = n => { const m = Math.round(n * 60); return Math.floor(m / 60) + ':' + pad(m % 60); };   // 시간을 4:45처럼 시:분으로
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const realToday = () => parse(ymd(new Date()));
 const slotTime = i => pad(Math.floor(i / PER)) + ':' + pad((i % PER) * 15);
@@ -453,7 +453,7 @@ function drawSum() {
   if (typeof statHTML === 'function' && loaded) statHTML();
   const S = pDates().map(dayStat);
   const study = S.reduce((n, x) => n + x.study, 0), nights = S.filter(x => x.sleep > 0).length, sl = S.reduce((n, x) => n + x.sleep, 0);
-  $('p-sum').textContent = `주간 ${h1(study)}시간 · 평균 수면 ${nights ? h1(sl / nights) + '시간' : '–'}`;
+  $('p-sum').textContent = `주간 ${h1(study)} · 평균 수면 ${nights ? h1(sl / nights) : '–'}`;
 }
 function drawPens() {
   $('pg').classList.toggle('painting', pen !== undefined);
@@ -691,9 +691,21 @@ function statHTML() {
   const sl = W.filter(x => x.sleep > 0), sleepAvg = sl.length ? sl.reduce((n, x) => n + x.sleep, 0) / sl.length : null;
   const exN = W.filter(x => x.ex > 0).length;
   const ex = planItems('exams').filter(e => e.date >= t).sort((a, b) => a.date < b.date ? -1 : 1)[0];
-  const facts = [['하루 평균 공부', perDay === null ? '—' : h1(perDay) + '시간'], ['평균 수면', sleepAvg === null ? '—' : h1(sleepAvg) + '시간'], ['운동', exN + '회']];
+  // 지난 주들이 이 시점(같은 요일, 같은 시각)까지 공부한 시간의 평균. 공부 기록이 있는 주만 센다.
+  let pastAvg = null;
+  if (!pWeek) {
+    const now = new Date(), nowSlot = Math.floor((now.getHours() * 60 + now.getMinutes()) / 15), wi = wdIdx(now), sums = [];
+    const first = Object.keys(store.days).sort()[0];
+    for (let w = 1; first && ymd(addDays(parse(ds[0]), -7 * w + 6)) >= first; w++) {
+      let upto = 0, whole = 0;
+      for (let i = 0; i < 7; i++) cellsOf(ymd(addDays(parse(ds[0]), -7 * w + i))).forEach((v, k) => { if (!v.startsWith('study|')) return; whole++; if (i < wi || (i === wi && k < nowSlot)) upto++; });
+      if (whole) sums.push(upto / PER);
+    }
+    if (sums.length) pastAvg = sums.reduce((a, b) => a + b, 0) / sums.length;
+  }
+  const facts = [...(pWeek ? [] : [['여태 이맘때', pastAvg === null ? '—' : h1(pastAvg)]]), ['하루 평균 공부', perDay === null ? '—' : h1(perDay)], ['평균 수면', sleepAvg === null ? '—' : h1(sleepAvg)], ['운동', exN + '회']];
   const hero = (mode !== 'general' && ex ? `<div class="big"><div class="value">D-${between(realToday(), parse(ex.date))}</div><div class="sub">${md(ex.date)} ${esc(ex.subject || '')}</div></div>` : '')
-    + `<div class="big"><div class="label">${pWeek ? md(ds[0]) + '~' + md(ds[6]) + ' ' : '이번 주 '}공부 시간</div><div class="value">${h1(weekH)}<small>시간</small></div></div>`
+    + `<div class="big"><div class="label">${pWeek ? md(ds[0]) + '~' + md(ds[6]) + ' ' : '이번 주 '}공부 시간</div><div class="value">${h1(weekH)}</div></div>`
     + `<div class="facts">${facts.map(([k, v]) => `<div class="fact"><span class="label">${k}</span><span class="num">${v}</span></div>`).join('')}</div>`;
   $('hero').innerHTML = hero;
 

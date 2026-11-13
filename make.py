@@ -79,7 +79,27 @@ def starts_at_midnight(rec):
 
 
 def label(n):
-    return f"{n:.1f}".removesuffix(".0")
+    """시간을 4:45처럼 시:분으로 적는다."""
+    m = round(n * 60)
+    return f"{m // 60}:{m % 60:02d}"
+
+
+def past_at_this_point(data, monday, today, now_h):
+    """지난 주들이 이 시점(같은 요일, 같은 시각)까지 공부한 시간의 평균. 공부 기록이 있는 주만 센다."""
+    sums = []
+    for w in range(1, 60):
+        mon = monday - datetime.timedelta(days=7 * w)
+        upto, whole = 0.0, 0.0
+        for i in range(7):
+            for s, e in data.get("past", {}).get((mon + datetime.timedelta(days=i)).isoformat(), []):
+                whole += hours(e) - hours(s)
+                if i < today.weekday():
+                    upto += hours(e) - hours(s)
+                elif i == today.weekday():
+                    upto += max(0, min(hours(e), now_h) - hours(s))
+        if whole > 0:
+            sums.append(upto)
+    return sum(sums) / len(sums) if sums else None
 
 
 def text_w(g, s, f):
@@ -337,9 +357,11 @@ def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_emp
 
     # 하루 평균 공부는 전날까지의 평균이다 (오늘은 아직 끝나지 않았으므로 뺀다). 월요일에는 지난 날이 없어 '–'.
     prior = [t for t in totals[:today.weekday()] if t is not None]
-    stats = [("주간 공부", f"{label(week_study)}시간"),
-             ("하루 평균 공부", f"{label(sum(prior) / len(prior))}시간" if prior else "–"),
-             ("평균 수면", f"{label(sleep_hours / sleep_days)}시간" if sleep_days else "–")]
+    past = past_at_this_point(data, dates[0], today, now_h)
+    stats = [("주간 공부", label(week_study)),
+             ("여태 이맘때", label(past) if past is not None else "–"),
+             ("하루 평균", label(sum(prior) / len(prior)) if prior else "–"),
+             ("평균 수면", label(sleep_hours / sleep_days) if sleep_days else "–")]
     footer(g, stats, L, R, bottom + total_h, u)
     im.resize((W // SS, H // SS), Image.LANCZOS).save(out, optimize=True)
 
