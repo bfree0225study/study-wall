@@ -714,8 +714,8 @@ function statHTML() {
       if (whole) { weeks.push(per); fulls.push(full); }
     }
     if (weeks.length) {
-      pastAvg = Array.from({length: 7}, (_, i) => weeks.reduce((n, p) => n + p[i], 0) / weeks.length).slice(0, wi + 1).reduce((a, b) => a + b, 0);
-      pastDay = Array.from({length: 7}, (_, i) => fulls.reduce((n, p) => n + p[i], 0) / fulls.length);   // 오늘 칸 괄호: 시각과 상관없이 오늘 하루 전체까지
+            pastDay = Array.from({length: 7}, (_, i) => fulls.reduce((n, p) => n + p[i], 0) / fulls.length);   // 오늘 칸 괄호: 시각과 상관없이 오늘 하루 전체까지
+      pastAvg = pastDay.slice(0, wi + 1).reduce((a, b) => a + b, 0);   // 주간 공부 옆 괄호도 같은 기준
     }
   }
   ds.forEach(paintSum);

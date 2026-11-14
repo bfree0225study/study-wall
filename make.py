@@ -384,7 +384,7 @@ def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_emp
 
     # 하루 평균 공부는 전날까지의 평균이다 (오늘은 아직 끝나지 않았으므로 뺀다). 월요일에는 지난 날이 없어 '–'.
     prior = [t for t in totals[:today.weekday()] if t is not None]
-    past = past_at_this_point(data, dates[0], today, now_h)
+    past = past_at_this_point(data, dates[0], today, 24)   # 시각과 상관없이 월요일부터 오늘 하루 끝까지 평균
     stats = [("주간 공부", label(week_study)),
              *([("", f"({label(past)})")] if past is not None else []),
              ("하루 평균 공부", label(sum(prior) / len(prior)) if prior else "–"),
