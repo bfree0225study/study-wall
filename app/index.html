@@ -706,16 +706,16 @@ function statHTML() {
   let pastAvg = null;
   pastDay = null;
   if (!pWeek) {
-    const now = new Date(), nowSlot = Math.floor((now.getHours() * 60 + now.getMinutes()) / 15), wi = wdIdx(now), weeks = [];
+    const now = new Date(), nowSlot = Math.floor((now.getHours() * 60 + now.getMinutes()) / 15), wi = wdIdx(now), weeks = [], fulls = [];
     const first = Object.keys(store.days).sort()[0];
     for (let w = 1; first && ymd(addDays(parse(ds[0]), -7 * w + 6)) >= first; w++) {
-      const per = Array(7).fill(0); let whole = 0;
-      for (let i = 0; i < 7; i++) cellsOf(ymd(addDays(parse(ds[0]), -7 * w + i))).forEach((v, k) => { if (!v.startsWith('study|')) return; whole++; if (i < wi || (i === wi && k < nowSlot)) per[i] += 1 / PER; });
-      if (whole) weeks.push(per);
+      const per = Array(7).fill(0), full = Array(7).fill(0); let whole = 0;
+      for (let i = 0; i < 7; i++) cellsOf(ymd(addDays(parse(ds[0]), -7 * w + i))).forEach((v, k) => { if (!v.startsWith('study|')) return; whole++; if (i < wi || (i === wi && k < nowSlot)) per[i] += 1 / PER; if (i <= wi) full[i] += 1 / PER; });
+      if (whole) { weeks.push(per); fulls.push(full); }
     }
     if (weeks.length) {
-      pastDay = Array.from({length: 7}, (_, i) => weeks.reduce((n, p) => n + p[i], 0) / weeks.length);
-      pastAvg = pastDay.slice(0, wi + 1).reduce((a, b) => a + b, 0);
+      pastAvg = Array.from({length: 7}, (_, i) => weeks.reduce((n, p) => n + p[i], 0) / weeks.length).slice(0, wi + 1).reduce((a, b) => a + b, 0);
+      pastDay = Array.from({length: 7}, (_, i) => fulls.reduce((n, p) => n + p[i], 0) / fulls.length);   // 오늘 칸 괄호: 시각과 상관없이 오늘 하루 전체까지
     }
   }
   ds.forEach(paintSum);

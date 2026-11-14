@@ -354,7 +354,7 @@ def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_emp
     # 각 날짜 아래 하루 공부 합계
     f_total = font(BOLD, int(32 * u))
     f_pavg = font(SANS, int(22 * u))
-    by_day = past_by_day(data, dates[0], today, now_h)
+    by_day = past_by_day(data, dates[0], today, 24)   # 오늘 칸 괄호는 시각과 상관없이 오늘 하루 전체까지
     for i, t in enumerate(totals):
         d = dates[i]
         note = data.get("notes", {}).get(d.isoformat(), []) if d >= today else []
