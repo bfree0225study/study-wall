@@ -456,7 +456,7 @@ let pastDay = null;
 function paintSum(date) {
   const sum = document.querySelector(`.psum[data-d="${date}"]`); if (!sum || !pCells[date]) return;
   const h = pCells[date].filter(v => v.startsWith('study|')).length / PER, i = pDates().indexOf(date);
-  const pa = !pWeek && pastDay && date <= ymd(realToday()) && pastDay[i] != null ? `<small class="pa">(${h1(pastDay.slice(0, i + 1).reduce((a, b) => a + b, 0))})</small>` : '';
+  const pa = !pWeek && pastDay && date === ymd(realToday()) && pastDay[i] != null ? `<small class="pa">(${h1(pastDay.slice(0, i + 1).reduce((a, b) => a + b, 0))})</small>` : '';
   sum.innerHTML = (h ? h1(h) : '·') + pa;
 }
 function drawSum() {

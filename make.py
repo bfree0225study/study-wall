@@ -368,7 +368,7 @@ def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_emp
         elif t is not None:
             s = label(t)
             # 합계 옆에 작고 연하게: 지난 주들이 월요일부터 그날(오늘은 지금 시각)까지 평균 몇 시간 했는지
-            pa = f"({label(sum(by_day[:i + 1]))})" if by_day else ""   # 월요일부터 그날까지 누적 평균
+            pa = f"({label(sum(by_day[:i + 1]))})" if by_day and dates[i] == today else ""   # 오늘 칸에만   # 월요일부터 그날까지 누적 평균
             # 칸 폭을 넘으면 두 글자를 함께 줄인다
             k = 1.0
             while True:
