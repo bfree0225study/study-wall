@@ -354,10 +354,22 @@ def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_emp
     # 각 날짜 아래 하루 공부 합계
     f_total = font(BOLD, int(32 * u))
     f_pavg = font(SANS, int(22 * u))
-    by_day = past_by_day(data, dates[0], today, 24)   # 오늘 칸 괄호는 시각과 상관없이 오늘 하루 전체까지
+    def planned(d):
+        """할 일로 칠한 공부 칸 시간(오늘은 지금 이후 남은 것만)."""
+        n = 0.0
+        for p in data.get("plan", []):
+            if p["d"] == d.isoformat() and p.get("k") == "study":
+                a, b = hours(p["s"]), hours(p["e"])
+                if d == today:
+                    a = max(a, now_h)
+                n += max(0, b - a)
+        return n
     for i, t in enumerate(totals):
         d = dates[i]
         note = data.get("notes", {}).get(d.isoformat(), []) if d >= today else []
+        plan_h = planned(d) if d >= today else 0
+        if plan_h and not note:
+            t = t or 0
         if note:
             s = note[0] + (f"+{len(note) - 1}" if len(note) > 1 else "")
             size = 28
@@ -366,9 +378,11 @@ def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_emp
             f_note = font(BOLD, int(size * u))
             g.text((X(i) + (col - text_w(g, s, f_note)) / 2, bottom + 8 * u), s, font=f_note, fill=RED)
         elif t is not None:
-            s = label(t)
-            # 합계 옆에 작고 연하게: 지난 주들이 월요일부터 그날(오늘은 지금 시각)까지 평균 몇 시간 했는지
-            pa = f"({label(sum(by_day[:i + 1]))})" if by_day and dates[i] == today else ""   # 오늘 칸에만   # 월요일부터 그날까지 누적 평균
+            s = label(t) if d <= today else ""   # 앞으로 올 날은 예정 시간만
+            # 할 일로 공부를 칠해 두었으면 옆에 작게 "→다 하면 될 하루 공부 시간"
+            pa = f"→{label(t + plan_h)}" if plan_h else ""
+            if not s:
+                s, pa = pa, ""   # 앞으로 올 날은 →시간만, 같은 작은 글씨로
             # 칸 폭을 넘으면 두 글자를 함께 줄인다
             k = 1.0
             while True:
@@ -378,7 +392,7 @@ def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_emp
                     break
                 k -= 0.05
             x = X(i) + (col - (w1 + (4 * u + w2 if pa else 0))) / 2
-            g.text((x, bottom + 34 * u), s, font=ft, fill=BLUE, anchor="ls")
+            g.text((x, bottom + 34 * u), s, font=fp if s.startswith("→") else ft, fill=INK_SOFT if s.startswith("→") else BLUE, anchor="ls")
             if pa:
                 g.text((x + w1 + 4 * u, bottom + 34 * u), pa, font=fp, fill=INK_SOFT, anchor="ls")
 

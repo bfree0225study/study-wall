@@ -451,13 +451,15 @@ function drawCol(date) {
   paintSum(date);
   drawSum();
 }
-// 날짜 아래 합계. 이번 주에는 그 밑에 작게 (지난 주들이 월요일부터 그날까지 평균 몇 시간 했는지, 누적)를 함께 적는다.
+// 날짜 아래 합계.
 let pastDay = null;
 function paintSum(date) {
   const sum = document.querySelector(`.psum[data-d="${date}"]`); if (!sum || !pCells[date]) return;
-  const h = pCells[date].filter(v => v.startsWith('study|')).length / PER, i = pDates().indexOf(date);
-  const pa = !pWeek && pastDay && date === ymd(realToday()) && pastDay[i] != null ? `<small class="pa">(${h1(pastDay.slice(0, i + 1).reduce((a, b) => a + b, 0))})</small>` : '';
-  sum.innerHTML = (h ? h1(h) : '·') + pa;
+  const h = pCells[date].filter(v => v.startsWith('study|')).length / PER;
+  // 할 일로 칠한 공부 칸이 있으면 밑에 작게 "→다 하면 될 하루 공부 시간" (오늘은 지금 이후 칸만)
+  const t = ymd(realToday()), from = date === t ? Math.floor((new Date().getHours() * 60 + new Date().getMinutes()) / 15) : 0;
+  const plan = date >= t ? pCells[date].filter((v, k) => k >= from && v.startsWith('plan-study|')).length / PER : 0;
+  sum.innerHTML = (date > t && plan ? '' : h ? h1(h) : '·') + (plan ? `<small class="pa">→${h1(h + plan)}</small>` : '');
 }
 function drawSum() {
   if (typeof statHTML === 'function' && loaded) statHTML();
