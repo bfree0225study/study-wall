@@ -91,7 +91,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .frac i:first-child { width: 1.8em; margin-inline: auto; border-bottom: 1px solid currentColor; }
 .pg .ph { position: relative; height: calc(96 * var(--slot)); font-size: 10.5px; color: var(--ink-2); font-family: var(--font-num); }
 .pg .ph span { position: absolute; left: 0; transform: translateY(-50%); }
-.pg .ph.r span { left: auto; right: 0; }  /* 오른쪽 시각 표기 (2시간 단위) */
+.pg .ph.r span { left: auto; right: 0; }  /* 오른쪽 시각 표기 (1시간 단위) */
 .pg .pcol.last { border-right: 1px solid var(--line); }
 .pg .pcol { border-left: 1px solid var(--line); user-select: none; -webkit-user-select: none; cursor: pointer; }
 .c.sep { box-shadow: inset 0 1px 0 var(--ink-2); }
@@ -491,7 +491,7 @@ function drawGrid() {
   // 시각: 매 시간 (12 1 2 ... 11 12 1 ... 12). 낮 12시에만 진한 선.
   html += '<div class="ph">' + Array.from({length: 25}, (_, h) => `<span style="top:${h / 24 * 100}%">${h % 12 || 12}</span>`).join('') + '</div>';
   html += ds.map((d, i) => `<div class="pcol${i === 6 ? ' last' : ''}" data-d="${d}">${'<div class="c"></div>'.repeat(SLOTS)}</div>`).join('');
-  html += '<div class="ph r">' + Array.from({length: 13}, (_, k) => `<span style="top:${k * 2 / 24 * 100}%">${(k * 2) % 12 || 12}</span>`).join('') + '</div>';
+  html += '<div class="ph r">' + Array.from({length: 25}, (_, h) => `<span style="top:${h / 24 * 100}%">${h % 12 || 12}</span>`).join('') + '</div>';
   html += '<div></div>' + ds.map(d => `<div class="psum" data-d="${d}"></div>`).join('') + '<div></div>';
   $('pg').innerHTML = html;
   ds.forEach(d => { if (!pDirty.has(d)) pCells[d] = cellsOf(d); drawCol(d); });
