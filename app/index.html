@@ -456,9 +456,12 @@ let pastDay = null;
 function paintSum(date) {
   const sum = document.querySelector(`.psum[data-d="${date}"]`); if (!sum || !pCells[date]) return;
   const h = pCells[date].filter(v => v.startsWith('study|')).length / PER;
-  // 할 일로 칠한 공부 칸이 있으면 밑에 작게 "→다 하면 될 하루 공부 시간" (오늘은 지금 이후 칸만)
+  // 연한 공부 칸이 있으면 밑에 작게 "→다 하면 될 하루 공부 시간" (오늘은 지금 이후 칸만)
   const t = ymd(realToday()), from = date === t ? Math.floor((new Date().getHours() * 60 + new Date().getMinutes()) / 15) : 0;
-  const plan = date >= t ? pCells[date].filter((v, k) => k >= from && v.startsWith('plan-study|')).length / PER : 0;
+  // 할 일로 칠한 칸 + 주간 시간표가 깔아 주는 칸(학원, 운동 뒤 공부). 지우개로 지운 칸은 빠진다.
+  let plan = 0;
+  if (date >= t) { const a = [...pCells[date]]; timetableCells(date, a).forEach((v, k) => { if (v && !a[k]) a[k] = v; });
+    plan = a.filter((v, k) => k >= from && v.startsWith('plan-study|')).length / PER; }
   sum.innerHTML = (date > t && plan ? '' : h ? h1(h) : '·') + (plan ? `<small class="pa">→${h1(h + plan)}</small>` : '');
 }
 function drawSum() {

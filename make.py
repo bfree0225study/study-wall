@@ -355,15 +355,27 @@ def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_emp
     f_total = font(BOLD, int(32 * u))
     f_pavg = font(SANS, int(22 * u))
     def planned(d):
-        """할 일로 칠한 공부 칸 시간(오늘은 지금 이후 남은 것만)."""
-        n = 0.0
+        """연한 할 일 칸 중 공부 칸 시간: 할 일로 칠한 칸 + 주간 시간표가 깔아 주는 칸(학원, 운동 뒤 공부).
+        이미 칠한 칸과 지우개로 지운 칸은 빼고, 오늘은 지금 이후 남은 칸만 센다. 15분 칸 단위로 기록장과 같은 규칙."""
+        slot = lambda t: round(hours(t) * 4)
+        cells = [""] * 96
+        rec = data["days"].get(d.isoformat(), {})
+        for s_, e_ in rec.get("sleep", []):
+            for k in range(slot(s_), slot(e_)): cells[k] = "done"
+        for s_, e_, _, _ in rec.get("blocks", []):
+            for k in range(slot(s_), slot(e_)): cells[k] = "done"
+        for s_, e_ in rec.get("skips", []):
+            for k in range(slot(s_), slot(e_)): cells[k] = "skip"
         for p in data.get("plan", []):
-            if p["d"] == d.isoformat() and p.get("k") == "study":
-                a, b = hours(p["s"]), hours(p["e"])
-                if d == today:
-                    a = max(a, now_h)
-                n += max(0, b - a)
-        return n
+            if p["d"] == d.isoformat():
+                for k in range(slot(p["s"]), slot(p["e"])):
+                    if not cells[k]: cells[k] = p.get("k") or "other"
+        for p in data.get("weekly", []):
+            if p["dow"] == WD[d.weekday()]:
+                for k in range(slot(p["s"]), slot(p["e"])):
+                    if not cells[k]: cells[k] = p.get("k") or "other"
+        start = int(now_h * 4) if d == today else 0
+        return sum(1 for k in range(start, 96) if cells[k] == "study") / 4
     for i, t in enumerate(totals):
         d = dates[i]
         note = data.get("notes", {}).get(d.isoformat(), []) if d >= today else []
