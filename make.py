@@ -367,13 +367,20 @@ def draw(data, today, W, H, out, todo_scale=1.0, top_empty=TOP_EMPTY, bottom_emp
             g.text((X(i) + (col - text_w(g, s, f_note)) / 2, bottom + 8 * u), s, font=f_note, fill=RED)
         elif t is not None:
             s = label(t)
-            # 합계 옆에 작고 연하게: 지난 주들의 같은 요일이 이 시점까지 평균 몇 시간이었는지
-            pa = f"({label(by_day[i])})" if by_day else ""
-            w1, w2 = text_w(g, s, f_total), text_w(g, pa, f_pavg) if pa else 0
+            # 합계 옆에 작고 연하게: 지난 주들이 월요일부터 그날(오늘은 지금 시각)까지 평균 몇 시간 했는지
+            pa = f"({label(sum(by_day[:i + 1]))})" if by_day else ""   # 월요일부터 그날까지 누적 평균
+            # 칸 폭을 넘으면 두 글자를 함께 줄인다
+            k = 1.0
+            while True:
+                ft, fp = font(BOLD, int(32 * u * k)), font(SANS, int(22 * u * k))
+                w1, w2 = text_w(g, s, ft), text_w(g, pa, fp) if pa else 0
+                if w1 + (4 * u + w2 if pa else 0) <= col - 10 * u or k < 0.6:
+                    break
+                k -= 0.05
             x = X(i) + (col - (w1 + (4 * u + w2 if pa else 0))) / 2
-            g.text((x, bottom + 4 * u), s, font=f_total, fill=BLUE)
+            g.text((x, bottom + 34 * u), s, font=ft, fill=BLUE, anchor="ls")
             if pa:
-                g.text((x + w1 + 4 * u, bottom + 4 * u + 30 * u), pa, font=f_pavg, fill=INK_SOFT, anchor="ls")
+                g.text((x + w1 + 4 * u, bottom + 34 * u), pa, font=fp, fill=INK_SOFT, anchor="ls")
 
     # 하루 평균 공부는 전날까지의 평균이다 (오늘은 아직 끝나지 않았으므로 뺀다). 월요일에는 지난 날이 없어 '–'.
     prior = [t for t in totals[:today.weekday()] if t is not None]

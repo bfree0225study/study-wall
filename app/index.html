@@ -451,12 +451,12 @@ function drawCol(date) {
   paintSum(date);
   drawSum();
 }
-// 날짜 아래 합계. 이번 주에는 그 밑에 작게 (지난 주들의 같은 요일이 이 시점까지 평균 몇 시간이었는지)를 함께 적는다.
+// 날짜 아래 합계. 이번 주에는 그 밑에 작게 (지난 주들이 월요일부터 그날까지 평균 몇 시간 했는지, 누적)를 함께 적는다.
 let pastDay = null;
 function paintSum(date) {
   const sum = document.querySelector(`.psum[data-d="${date}"]`); if (!sum || !pCells[date]) return;
   const h = pCells[date].filter(v => v.startsWith('study|')).length / PER, i = pDates().indexOf(date);
-  const pa = !pWeek && pastDay && date <= ymd(realToday()) && pastDay[i] != null ? `<small class="pa">(${h1(pastDay[i])})</small>` : '';
+  const pa = !pWeek && pastDay && date <= ymd(realToday()) && pastDay[i] != null ? `<small class="pa">(${h1(pastDay.slice(0, i + 1).reduce((a, b) => a + b, 0))})</small>` : '';
   sum.innerHTML = (h ? h1(h) : '·') + pa;
 }
 function drawSum() {
