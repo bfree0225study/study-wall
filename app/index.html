@@ -725,7 +725,9 @@ function statHTML() {
   }
   ds.forEach(paintSum);
   const facts = [['하루 평균 공부', perDay === null ? '—' : h1(perDay)], ['평균 수면', sleepAvg === null ? '—' : h1(sleepAvg)], ['운동', exN + '회']];
-  const hero = (mode !== 'general' && ex ? `<div class="big"><div class="value">D-${between(realToday(), parse(ex.date))}</div><div class="sub">${md(ex.date)} ${esc(ex.subject || '')}</div></div>` : '')
+  // 이번 시험 기간 총 공부: 기록 처음(10/26)부터 오늘까지 칠한 공부 칸을 모두 더한다
+  const examTotal = Object.keys(store.days).filter(d => d >= '2026-10-26' && d <= t).reduce((n, d) => n + cellsOf(d).filter(v => v.startsWith('study|')).length / PER, 0);
+  const hero = (mode !== 'general' && ex ? `<div class="big"><div class="value">D-${between(realToday(), parse(ex.date))}<small class="past">총 ${h1(examTotal)}</small></div><div class="sub">${md(ex.date)} ${esc(ex.subject || '')}</div></div>` : '')
     + `<div class="big"><div class="label">${pWeek ? md(ds[0]) + '~' + md(ds[6]) + ' ' : '이번 주 '}공부 시간</div><div class="value">${h1(weekH)}${pastAvg === null ? '' : `<small class="past">(${h1(pastAvg)})</small>`}</div></div>`
     + `<div class="facts">${facts.map(([k, v]) => `<div class="fact"><span class="label">${k}</span><span class="num">${v}</span></div>`).join('')}</div>`;
   $('hero').innerHTML = hero;
