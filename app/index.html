@@ -333,7 +333,9 @@ function setMode(m) {
 /* ---------- 칸 칠하기 ---------- */
 // 저장 모양: days/<날짜> = {date, spans: [[시작, 끝, 글자, 종류]], sleep: 잔 시간}
 let pWeek = 0, pen = undefined, pCells = {}, pDirty = new Set(), pTimer = null, loaded = false;
-let pLater = false;   // 켜면 연한 칸(앞으로 할 일)으로 칠한다
+// 칠하는 순간 이미 지났거나 지금 진행 중인 칸은 진하게(한 것), 아직 안 온 칸은 연하게(할 일) 칠한다.
+const pastCut = date => { const t = ymd(realToday()); return date < t ? SLOTS : date > t ? 0 : Math.floor((new Date().getHours() * 60 + new Date().getMinutes()) / 15) + 1; };
+const cellVal = (base, date, k) => !base ? '' : k < pastCut(date) ? base : 'plan-' + base;
 let pUndo = [];       // 끌 때마다 칠하기 전 상태를 쌓는다 (최대 30번)
 let newKind = 'study';
 const pDates = () => { const m = addDays(realToday(), pWeek * 7 - wdIdx(realToday())); return WD.map((_, i) => ymd(addDays(m, i))); };
@@ -475,7 +477,6 @@ function drawPens() {
   // 직접 만든 항목은 고른 상태에서 ×를 누르면 목록에서 지운다 (이미 칠한 칸은 그대로 남는다)
   $('pens').innerHTML = labels().map((l, i) => `<button class="pen ${l.type}" type="button" data-pen="${i}" aria-pressed="${mark(l)}">${esc(l.t)}${i >= BASE_LABELS.length && mark(l) ? '<span class="penx" data-delpen="' + i + '" aria-label="목록에서 지우기">✕</span>' : ''}</button>`).join('')
     + `<button class="pen" type="button" data-pen="-1" aria-pressed="${pen === null}">지우개</button>`
-    + `<button class="pen" type="button" data-later aria-pressed="${pLater}">할 일로 칠하기</button>`
     + `<button class="pen" type="button" data-undo${pUndo.length ? '' : ' disabled'}>되돌리기</button>`;
 }
 // 요일 밑에 그날 기준 시험까지 남은 기간(주 단위 대분수). 일반 모드에서는 적지 않는다.
@@ -600,7 +601,7 @@ function pFill(i) {
   const a = pCells[pDrag.date], step = i >= pDrag.last ? 1 : -1;
   // 지울 때: 주간 시간표가 깔아 준 칸이면 '지움'(skip)으로 남겨, 다시 깔리지 않게 한다.
   const tt = pDrag.value === '' && pDrag.date >= ymd(realToday()) ? timetableCells(pDrag.date, a.map(v => v === 'skip|' ? '' : v)) : null;
-  for (let k = pDrag.last; ; k += step) { a[k] = pDrag.value === '' && tt && (tt[k] || a[k] === 'skip|') ? 'skip|' : pDrag.value; if (k === i) break; }
+  for (let k = pDrag.last; ; k += step) { a[k] = pDrag.value === '' && tt && (tt[k] || a[k] === 'skip|') ? 'skip|' : cellVal(pDrag.value, pDrag.date, k); if (k === i) break; }
   pDrag.last = i; drawCol(pDrag.date);
 }
 function pCommit() { if (!pDrag) return; pDirty.add(pDrag.date); pDrag = null; clearTimeout(pTimer); pTimer = setTimeout(pSave, 600); drawPens(); }
@@ -621,10 +622,10 @@ $('pg').addEventListener('pointerdown', e => {
   if (hold && e.pointerId !== hold.id) { pAbort(); return; }  // 두 번째 손가락: 칠하던 것을 취소하고 확대에 양보
   const col = e.target.closest('.pcol'); if (!col || !painting() || hold || !loaded) return;
   e.preventDefault();
-  const date = col.dataset.d, i = slotAt(col, e.clientY), v = pen ? (pLater ? 'plan-' : '') + pen.type + '|' + pen.t : '';
+  const date = col.dataset.d, i = slotAt(col, e.clientY), v = pen ? pen.type + '|' + pen.t : '';
   hold = {id: e.pointerId, col};
   pUndo.push({date, cells: [...pCells[date]]}); if (pUndo.length > 30) pUndo.shift();
-  pDrag = {date, last: i, value: pCells[date][i] === v ? '' : v};  // 같은 항목 칸에서 시작하면 지운다
+  pDrag = {date, last: i, value: v && pCells[date][i] === cellVal(v, date, i) ? '' : v};  // 같은 항목 칸에서 시작하면 지운다
   try { col.setPointerCapture(e.pointerId); } catch (err) {}
   pFill(i);
 });
@@ -644,7 +645,6 @@ $('pens').addEventListener('click', async e => {
     return;
   }
   if (e.target.closest('[data-undo]')) { pBack(); return; }
-  if (e.target.closest('[data-later]')) { pLater = !pLater; drawPens(); return; }
   const b = e.target.closest('[data-pen]'); if (!b) return;
   const i = Number(b.dataset.pen), next = i < 0 ? null : labels()[i];
   pen = (next === null ? pen === null : pen && next && pen.t === next.t) ? undefined : next;  // 고른 것을 다시 누르면 선택 해제
