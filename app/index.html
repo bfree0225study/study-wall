@@ -398,21 +398,41 @@ function studyAfter(w) {
   return ends.length && ends[ends.length - 1] < '24:00' ? ends[ends.length - 1] : null;
 }
 // 운동 시간에는 3분할 순서(등→가슴→하체)대로 다음에 할 부위를 적는다. (잠금화면과 같은 규칙)
-// 마지막으로 한 부위의 다음부터, 오늘(오늘 운동을 이미 했으면 내일)부터 운동 시간마다 하나씩 채운다.
+// 마지막으로 한 부위의 다음부터, 오늘부터 운동 시간마다 하나씩 채운다.
+// 동우님이 직접 칠한 운동 부위(한 것이든 할 일이든)가 있으면 그 칸을 기준으로 다시 이어서 센다.
 const SPLIT = ['등', '가슴', '하체'];
-const dayParts = d => cellsFor(d).map(v => v.startsWith('other|') ? v.slice(6) : '').filter(t => SPLIT.includes(t));
+const partRuns = a => {   // 하루 칸에서 같은 운동 부위가 이어진 덩어리들 (진한 칸·연한 칸 상관없이 하나로 본다)
+  const out = []; let cur = null;
+  a.forEach((v, i) => {
+    const m = /^(?:plan-)?other\|(.+)$/.exec(v), t = m && SPLIT.includes(m[1]) ? m[1] : '';
+    if (!t) { cur = null; return; }
+    if (cur && cur.t === t) { cur.e = i + 1; if (!v.startsWith('plan-')) cur.done = true; return; }
+    cur = {t, s: i, e: i + 1, done: !v.startsWith('plan-')}; out.push(cur);
+  });
+  return out;
+};
 function splitFor(date) {
-  const today = ymd(realToday()); let last = null;
-  new Set([...Object.keys(store.days), ...pDates()]).forEach(d => { if (d <= today) { const p = dayParts(d); if (p.length && (!last || d >= last.d)) last = {d, t: p[p.length - 1]}; } });
-  if (!last || date < today) return new Map();
-  let nxt = (SPLIT.indexOf(last.t) + 1) % 3;
+  const today = ymd(realToday()), nowSlot = Math.floor((new Date().getHours() * 60 + new Date().getMinutes()) / 15);
+  if (date < today) return new Map();
+  let last = null;
+  new Set([...Object.keys(store.days), ...pDates()]).forEach(d => { if (d < today) { const p = partRuns(cellsFor(d)).filter(r => r.done); if (p.length && (!last || d >= last.d)) last = {d, t: p[p.length - 1].t}; } });
+  let nxt = last ? (SPLIT.indexOf(last.t) + 1) % 3 : null;
   const tt = planItems('timetable');
   for (let d = today; d <= date; d = ymd(addDays(parse(d), 1))) {
-    if (d === today && dayParts(d).length) continue;
-    const dow = WD[wdIdx(new Date(d + 'T00:00'))];
-    const items = tt.filter(x => x.kind === '운동' && x.day === dow).sort((p, q) => p.start < q.start ? -1 : 1);
-    if (d === date) return new Map(items.map((x, k) => [x, SPLIT[(nxt + k) % 3]]));
-    nxt = (nxt + items.length) % 3;
+    const a = cellsFor(d), runs = partRuns(a), dow = WD[wdIdx(new Date(d + 'T00:00'))];
+    const hasDone = runs.some(r => r.done);
+    const ev = runs.filter(r => r.done || d > today || r.e > nowSlot).map(r => ({s: r.s, t: r.t}));
+    tt.filter(x => x.kind === '운동' && x.day === dow).forEach(x => {
+      const s = timeSlot(x.start), e = Math.min(timeSlot(x.end), SLOTS);
+      if (d === today && (e <= nowSlot || hasDone)) return;   // 이미 끝났거나 오늘 운동을 이미 했으면 세지 않는다
+      if (runs.some(r => r.s < e && s < r.e)) return;         // 직접 칠한 운동이 이 시간을 대신한다
+      if (a.slice(s, e).every(v => v)) return;                // 칸이 다 지워지거나 다른 것으로 바뀌었다
+      ev.push({s, x});
+    });
+    ev.sort((p, q) => p.s - q.s || (p.x ? 1 : 0) - (q.x ? 1 : 0));
+    const m = new Map();
+    ev.forEach(r => { if (r.t) nxt = (SPLIT.indexOf(r.t) + 1) % 3; else if (nxt !== null) { m.set(r.x, SPLIT[nxt]); nxt = (nxt + 1) % 3; } });
+    if (d === date) return m;
   }
   return new Map();
 }
@@ -421,7 +441,9 @@ function timetableCells(date, a) {
   const o = Array(SLOTS).fill('');
   const dow = WD[wdIdx(new Date(date + 'T00:00'))];
   const parts = splitFor(date);
+  const runs = partRuns(a);
   planItems('timetable').filter(x => x.day === dow).forEach(x => {
+    if (x.kind === '운동' && runs.some(r => r.s < timeSlot(x.end) && timeSlot(x.start) < r.e)) return;   // 직접 칠한 운동이 그 시간을 대신한다
     const v = (x.kind === '운동' ? 'plan-other|' : x.kind === '학교' ? 'plan-school|' : 'plan-study|') + (parts.get(x) || x.title);
     for (let i = timeSlot(x.start); i < timeSlot(x.end) && i < SLOTS; i++) if (!a[i]) o[i] = v;
   });
@@ -604,10 +626,11 @@ function pFill(i) {
   for (let k = pDrag.last; ; k += step) { a[k] = pDrag.value === '' && tt && (tt[k] || a[k] === 'skip|') ? 'skip|' : cellVal(pDrag.value, pDrag.date, k); if (k === i) break; }
   pDrag.last = i; drawCol(pDrag.date);
 }
-function pCommit() { if (!pDrag) return; pDirty.add(pDrag.date); pDrag = null; clearTimeout(pTimer); pTimer = setTimeout(pSave, 600); drawPens(); }
+const redrawWeek = () => pDates().forEach(d => { if (pCells[d]) drawCol(d); });   // 운동 부위 순서가 날마다 이어지게 한 주를 다시 그린다
+function pCommit() { if (!pDrag) return; pDirty.add(pDrag.date); pDrag = null; redrawWeek(); clearTimeout(pTimer); pTimer = setTimeout(pSave, 600); drawPens(); }
 function pBack() {
   const u = pUndo.pop(); if (!u) return;
-  pCells[u.date] = u.cells; drawCol(u.date); pDirty.add(u.date);
+  pCells[u.date] = u.cells; redrawWeek(); pDirty.add(u.date);
   clearTimeout(pTimer); pTimer = setTimeout(pSave, 600); drawPens();
 }
 const painting = () => pen !== undefined;

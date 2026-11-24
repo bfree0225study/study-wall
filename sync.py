@@ -39,6 +39,42 @@ def from_logs(day):
     return blocks
 
 
+def slot_of(t):
+    h, m = map(int, t.split(":"))
+    return round(h * 4 + m / 15)
+
+
+def cells_of(day):
+    """하루를 15분 칸 96개로 편다 (기록장 칸과 같은 모양: '종류|이름')."""
+    a = [""] * 96
+    if isinstance(day.get("spans"), list):
+        for s, e, t, k in day["spans"]:
+            for i in range(slot_of(s), min(slot_of(e), 96)):
+                a[i] = f"{k}|{t}"
+    else:
+        for s, e, k, t in from_logs(day):
+            for i in range(slot_of(s), min(slot_of(e), 96)):
+                a[i] = f"{k}|{t}"
+    return a
+
+
+def part_runs(a):
+    """같은 운동 부위가 이어진 덩어리들 (한 것·할 일 상관없이 하나로 본다)."""
+    out, cur = [], None
+    for i, v in enumerate(a):
+        k, _, t = v.partition("|")
+        if k not in ("other", "plan-other") or t not in SPLIT:
+            cur = None
+            continue
+        if cur and cur["t"] == t:
+            cur["e"] = i + 1
+            cur["done"] = cur["done"] or k == "other"
+        else:
+            cur = {"t": t, "s": i, "e": i + 1, "done": k == "other"}
+            out.append(cur)
+    return out
+
+
 def main(folder):
     today = datetime.datetime.now(KST).date()
     monday = today - datetime.timedelta(days=today.weekday())
@@ -49,10 +85,6 @@ def main(folder):
         d = load(path)
         if d.get("date"):
             every[d["date"]] = d
-
-    def workouts(d):
-        spans = [t for _, _, t, k in d.get("spans") or [] if t in SPLIT and not k.startswith("plan-")]
-        return spans or [l.get("note") for l in d.get("logs", []) if l.get("note") in SPLIT]
 
     # 지난 주들의 공부 칸 ("여태 이맘때" 계산용)
     past = {d["date"]: [[s, e] for s, e, _, k in d["spans"] if k == "study"]
@@ -87,18 +119,39 @@ def main(folder):
             weekly.append({"dow": w, "s": max(ends), "e": "24:00", "t": "공부", "k": "study"})
     plan, notes, todos = [], {}, []
 
-    # 운동 시간에는 3분할 순서대로 다음에 할 부위를 적는다.
+    # 운동 시간에는 3분할 순서대로 다음에 할 부위를 적는다. (기록장과 같은 규칙)
+    # 마지막으로 한 부위의 다음부터 이어 세고, 동우님이 직접 칠한 운동 부위(한 것이든 할 일이든)가 있으면 그 칸을 기준으로 다시 이어서 센다.
+    now = datetime.datetime.now(KST)
+    now_slot = now.hour * 4 + now.minute // 15
     last = None
     for date in sorted(every):
-        if date <= today.isoformat() and workouts(every[date]):
-            last = workouts(every[date])[-1]
+        if date < today.isoformat():
+            done = [r["t"] for r in part_runs(cells_of(every[date])) if r["done"]]
+            if done:
+                last = done[-1]
     nxt = (SPLIT.index(last) + 1) % 3 if last else None
     wd = ["월", "화", "수", "목", "금", "토", "일"]
     for i in range(7):
         d = monday + datetime.timedelta(days=i)
-        if d < today or (d == today and workouts(every.get(d.isoformat(), {}))):
+        if d < today:
             continue
+        a = cells_of(every.get(d.isoformat(), {}))
+        runs = part_runs(a)
+        has_done = any(r["done"] for r in runs)
+        ev = [(r["s"], 0, r["t"], None) for r in runs if r["done"] or d > today or r["e"] > now_slot]
         for t in sorted((t for t in table if t.get("kind") == "운동" and t["day"] == wd[i]), key=lambda t: t["start"]):
+            s_, e_ = slot_of(t["start"]), min(slot_of(t["end"]), 96)
+            if d == today and (e_ <= now_slot or has_done):
+                continue  # 이미 끝났거나 오늘 운동을 이미 했으면 세지 않고 그리지도 않는다
+            if any(r["s"] < e_ and s_ < r["e"] for r in runs):
+                continue  # 직접 칠한 운동이 이 시간을 대신한다
+            if all(a[s_:e_]):
+                continue  # 칸이 다 지워지거나 다른 것으로 바뀌었다
+            ev.append((s_, 1, None, t))
+        for _, _, part, t in sorted(ev, key=lambda x: (x[0], x[1])):
+            if part:
+                nxt = (SPLIT.index(part) + 1) % 3
+                continue
             plan.append({"d": d.isoformat(), "s": t["start"], "e": t["end"], "k": "other",
                          "t": SPLIT[nxt] if nxt is not None else "운동"})
             if nxt is not None:
